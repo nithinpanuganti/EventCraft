@@ -14,7 +14,17 @@ import { QuoteModal } from "@/components/vendors/QuoteModal";
 import { QuoteComparisonTable } from "@/components/vendors/QuoteComparisonTable";
 import { formatMoney } from "@/lib/budget/financial-engine";
 import { type VendorWithQuotes } from "@/lib/vendors/vendor-service";
-import { VendorStatus } from "@prisma/client";
+import { VendorStatus } from "@/lib/storage/types";
+import {
+  getLocalEvents,
+  getLocalVendorsAndCategories,
+  createLocalVendor,
+  updateLocalVendor,
+  deleteLocalVendor,
+  addLocalVendorQuote,
+  selectLocalVendorQuote,
+} from "@/lib/storage/local-repository";
+import { useAuth } from "@/components/layout/AuthContext";
 import {
   Building2,
   Calendar,
@@ -39,11 +49,11 @@ interface EventItem {
 function VendorsContent() {
   const searchParams = useSearchParams();
   const urlEventId = searchParams.get("eventId");
+  const { user, activeEvent } = useAuth();
 
   const [events, setEvents] = useState<EventItem[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(urlEventId);
   const [loadingEvents, setLoadingEvents] = useState(true);
-  const [isUnauthenticated, setIsUnauthenticated] = useState(false);
 
   // Vendors state
   const [vendors, setVendors] = useState<VendorWithQuotes[]>([]);
@@ -65,52 +75,34 @@ function VendorsContent() {
 
   const [, startTransition] = useTransition();
 
-  // Load events
+  // Load events from local IndexedDB
   const loadEvents = useCallback(async () => {
     try {
       setLoadingEvents(true);
       setError(null);
-      const res = await fetch("/api/events");
-      if (res.status === 401) {
-        setIsUnauthenticated(true);
-        setEvents([]);
-        return;
-      }
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        setError(errJson.error || "Unable to load events.");
-        setEvents([]);
-        return;
-      }
-      const data = await res.json();
-      const evList = data.events || [];
+      const evList = await getLocalEvents(user?.id);
       setEvents(evList);
 
       if (evList.length > 0) {
-        setSelectedEventId((prev) => (prev && evList.some((e: EventItem) => e.id === prev) ? prev : evList[0].id));
+        setSelectedEventId((prev) => (prev && evList.some((e: EventItem) => e.id === prev) ? prev : (activeEvent?.id || evList[0].id)));
       }
     } catch (err: unknown) {
       console.error(err);
-      setError("Unable to load events. Please check your connection or sign in.");
+      setError("Unable to load events from local storage.");
       setEvents([]);
     } finally {
       setLoadingEvents(false);
     }
-  }, []);
+  }, [user?.id, activeEvent?.id]);
 
   // Load vendors for selected event
   const loadVendors = useCallback(async (eventId: string) => {
     try {
       setLoadingVendors(true);
       setError(null);
-      const res = await fetch(`/api/events/${eventId}/vendors`);
-      if (!res.ok) {
-        const errJson = await res.json();
-        throw new Error(errJson.error || "Failed to load vendors");
-      }
-      const data = await res.json();
-      setVendors(data.vendors || []);
-      setCategories(data.categories || []);
+      const { vendors: vList, categories: cList } = await getLocalVendorsAndCategories(eventId);
+      setVendors(vList);
+      setCategories(cList);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to load vendors.";
       setError(msg);
@@ -143,28 +135,22 @@ function VendorsContent() {
   }) => {
     if (!selectedEventId) return;
 
-    let res: Response;
-    if (editingVendor) {
-      res = await fetch(`/api/events/${selectedEventId}/vendors/${editingVendor.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-    } else {
-      res = await fetch(`/api/events/${selectedEventId}/vendors`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-    }
+    try {
+      if (editingVendor) {
+        await updateLocalVendor(editingVendor.id, data);
+      } else {
+        await createLocalVendor({
+          eventId: selectedEventId,
+          ...data,
+        });
+      }
 
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || "Failed to save vendor.");
+      await loadVendors(selectedEventId);
+      setEditingVendor(null);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to save vendor.";
+      throw new Error(msg);
     }
-
-    await loadVendors(selectedEventId);
-    setEditingVendor(null);
   };
 
   // Delete vendor
@@ -172,17 +158,13 @@ function VendorsContent() {
     if (!selectedEventId) return;
     if (!confirm(`Are you sure you want to delete vendor "${name}" and all their quotes?`)) return;
 
-    const res = await fetch(`/api/events/${selectedEventId}/vendors/${vendorId}`, {
-      method: "DELETE",
-    });
-
-    if (!res.ok) {
-      const err = await res.json();
-      alert(err.error || "Failed to delete vendor.");
-      return;
+    try {
+      await deleteLocalVendor(vendorId);
+      await loadVendors(selectedEventId);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to delete vendor.";
+      alert(msg);
     }
-
-    await loadVendors(selectedEventId);
   };
 
   // Save quotation
@@ -197,35 +179,29 @@ function VendorsContent() {
   }) => {
     if (!selectedEventId) return;
 
-    const res = await fetch(`/api/events/${selectedEventId}/vendors?action=quote`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(quoteData),
-    });
-
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || "Failed to record quote.");
+    try {
+      await addLocalVendorQuote({
+        ...quoteData,
+        eventId: selectedEventId,
+      });
+      await loadVendors(selectedEventId);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to record quote.";
+      throw new Error(msg);
     }
-
-    await loadVendors(selectedEventId);
   };
 
   // Select quote
   const handleSelectQuote = async (quoteId: string) => {
     if (!selectedEventId) return;
 
-    const res = await fetch(`/api/events/${selectedEventId}/vendors/quotes/${quoteId}?action=select`, {
-      method: "POST",
-    });
-
-    if (!res.ok) {
-      const err = await res.json();
-      alert(err.error || "Failed to select quote.");
-      return;
+    try {
+      await selectLocalVendorQuote(selectedEventId, quoteId);
+      await loadVendors(selectedEventId);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to select quote.";
+      alert(msg);
     }
-
-    await loadVendors(selectedEventId);
   };
 
   if (loadingEvents) {
@@ -236,7 +212,7 @@ function VendorsContent() {
     );
   }
 
-  if (isUnauthenticated) {
+  if (!user) {
     return (
       <div className="space-y-6">
         <PageHeader
@@ -245,9 +221,9 @@ function VendorsContent() {
         />
         <EmptyState
           icon={Building2}
-          title="Sign in required"
-          description="Please sign in or create an account to view and manage your vendor directory and quotes."
-          actionLabel="Sign In"
+          title="Local profile required"
+          description="Please select or create a local browser profile to view and manage your vendor directory and quotes."
+          actionLabel="Select Profile"
           actionHref="/login"
         />
       </div>

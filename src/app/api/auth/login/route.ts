@@ -2,21 +2,31 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { LoginSchema } from "@/lib/validations";
 import { comparePassword, createSessionCookie } from "@/lib/auth";
+import { Prisma } from "@prisma/client";
 
 export async function POST(request: Request) {
+  let body: unknown;
   try {
-    const body = await request.json();
-    const result = LoginSchema.safeParse(body);
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid JSON request body." },
+      { status: 400 }
+    );
+  }
 
-    if (!result.success) {
-      return NextResponse.json(
-        { error: "Validation failed", details: result.error.flatten().fieldErrors },
-        { status: 400 }
-      );
-    }
+  const result = LoginSchema.safeParse(body);
 
-    const { email, password } = result.data;
+  if (!result.success) {
+    return NextResponse.json(
+      { error: "Validation failed", details: result.error.flatten().fieldErrors },
+      { status: 400 }
+    );
+  }
 
+  const { email, password } = result.data;
+
+  try {
     const user = await prisma.user.findUnique({
       where: { email },
     });
@@ -52,7 +62,33 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error("Login error:", error);
+    // Check for database connection / unreachable server errors
+    const isDbUnreachable =
+      error instanceof Prisma.PrismaClientInitializationError ||
+      (error instanceof Prisma.PrismaClientKnownRequestError &&
+        ["P1000", "P1001", "P1002", "P1003", "P1017"].includes(error.code)) ||
+      (error instanceof Error &&
+        (error.message.includes("Can't reach database server") ||
+          error.message.includes("ECONNREFUSED")));
+
+    if (isDbUnreachable) {
+      console.error(
+        "[AUTH_LOGIN_DB_OFFLINE] Database unreachable at configured host/port."
+      );
+      return NextResponse.json(
+        {
+          error:
+            "Database service is temporarily unavailable. Please verify PostgreSQL is running.",
+        },
+        { status: 503 }
+      );
+    }
+
+    console.error(
+      "[AUTH_LOGIN_ERROR]",
+      error instanceof Error ? error.message : "Unexpected login error"
+    );
+
     return NextResponse.json(
       { error: "Internal server error occurred during login." },
       { status: 500 }

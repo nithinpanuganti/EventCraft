@@ -248,3 +248,5 @@ export function validateProposedAllocations(
     exceededByCents: 0,
   };
 }
+
+export const computeOverallBudgetSummary = calculateBudgetMetrics;

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { type TaskWithDependencies } from "@/lib/timeline/timeline-service";
-import { TaskPhase, TaskPriority, TaskStatus } from "@prisma/client";
+import { TaskPhase, TaskPriority, TaskStatus } from "@/lib/storage/types";
 
 interface TaskModalProps {
   isOpen: boolean;

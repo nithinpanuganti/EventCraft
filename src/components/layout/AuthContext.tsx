@@ -2,6 +2,18 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import {
+  LocalProfile,
+  LocalEvent,
+} from "@/lib/storage/types";
+import {
+  getActiveLocalProfile,
+  getLocalProfiles,
+  setActiveLocalProfile,
+  createLocalProfile,
+  deleteLocalProfile,
+  listLocalEvents,
+} from "@/lib/storage/local-repository";
 
 export interface SessionUser {
   id: string;
@@ -24,18 +36,26 @@ export interface EventSummaryItem {
 
 interface AuthContextValue {
   session: SessionUser | null;
+  user: LocalProfile | null;
+  profiles: LocalProfile[];
+  activeProfile: LocalProfile | null;
+  activeEvent: EventSummaryItem | null;
   loading: boolean;
   events: EventSummaryItem[];
   loadingEvents: boolean;
   refreshSession: () => Promise<void>;
   refreshEvents: () => Promise<void>;
+  switchProfile: (profileId: string) => Promise<void>;
+  createProfile: (name: string, email: string) => Promise<LocalProfile>;
+  removeProfile: (profileId: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<SessionUser | null>(null);
+  const [activeProfile, setActiveProfile] = useState<LocalProfile | null>(null);
+  const [profiles, setProfiles] = useState<LocalProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [events, setEvents] = useState<EventSummaryItem[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
@@ -44,42 +64,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshEvents = useCallback(async () => {
     try {
       setLoadingEvents(true);
-      const res = await fetch("/api/events");
-      if (res.ok) {
-        const data = await res.json();
-        setEvents(data.events || []);
-      } else {
+      if (!activeProfile) {
         setEvents([]);
+        return;
       }
-    } catch {
+      const localEvents = await listLocalEvents(activeProfile.id);
+      setEvents(
+        localEvents.map((e: LocalEvent) => ({
+          id: e.id,
+          title: e.title,
+          type: e.type,
+          eventDate: e.eventDate,
+          location: e.location,
+          guestCount: e.guestCount,
+          totalBudget: e.totalBudget,
+          currency: e.currency,
+          status: e.status,
+          updatedAt: e.updatedAt,
+        }))
+      );
+    } catch (err) {
+      console.warn("[AuthContext] Error reading local events:", err);
       setEvents([]);
     } finally {
       setLoadingEvents(false);
     }
-  }, []);
+  }, [activeProfile]);
 
   const refreshSession = useCallback(async () => {
     try {
-      const res = await fetch("/api/auth/me");
-      if (res.ok) {
-        const data = await res.json();
-        const user = data?.user || null;
-        setSession(user);
-        if (user) {
-          // Prefetch events once session is confirmed
-          fetch("/api/events")
-            .then((r) => (r.ok ? r.json() : { events: [] }))
-            .then((d) => setEvents(d.events || []))
-            .catch(() => setEvents([]));
-        } else {
-          setEvents([]);
-        }
-      } else {
-        setSession(null);
-        setEvents([]);
-      }
-    } catch {
-      setSession(null);
+      setLoading(true);
+      const [allProfiles, currentProfile] = await Promise.all([
+        getLocalProfiles(),
+        getActiveLocalProfile(),
+      ]);
+      setProfiles(allProfiles);
+      setActiveProfile(currentProfile);
+
+      const localEvents = await listLocalEvents(currentProfile.id);
+      setEvents(
+        localEvents.map((e: LocalEvent) => ({
+          id: e.id,
+          title: e.title,
+          type: e.type,
+          eventDate: e.eventDate,
+          location: e.location,
+          guestCount: e.guestCount,
+          totalBudget: e.totalBudget,
+          currency: e.currency,
+          status: e.status,
+          updatedAt: e.updatedAt,
+        }))
+      );
+    } catch (err) {
+      console.warn("[AuthContext] Error reading local profile:", err);
+      setActiveProfile(null);
       setEvents([]);
     } finally {
       setLoading(false);
@@ -90,26 +129,76 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     refreshSession();
   }, [refreshSession]);
 
-  const logout = useCallback(async () => {
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-      setSession(null);
-      router.push("/login");
+  const switchProfile = useCallback(
+    async (profileId: string) => {
+      const switched = await setActiveLocalProfile(profileId);
+      setActiveProfile(switched);
+      const localEvents = await listLocalEvents(switched.id);
+      setEvents(
+        localEvents.map((e: LocalEvent) => ({
+          id: e.id,
+          title: e.title,
+          type: e.type,
+          eventDate: e.eventDate,
+          location: e.location,
+          guestCount: e.guestCount,
+          totalBudget: e.totalBudget,
+          currency: e.currency,
+          status: e.status,
+          updatedAt: e.updatedAt,
+        }))
+      );
       router.refresh();
-    } catch (err) {
-      console.error("Logout failed:", err);
-    }
+    },
+    [router]
+  );
+
+  const createProfile = useCallback(
+    async (name: string, email: string) => {
+      const created = await createLocalProfile(name, email);
+      await refreshSession();
+      return created;
+    },
+    [refreshSession]
+  );
+
+  const removeProfile = useCallback(
+    async (profileId: string) => {
+      await deleteLocalProfile(profileId);
+      await refreshSession();
+    },
+    [refreshSession]
+  );
+
+  const logout = useCallback(async () => {
+    // For local profiles: navigate to profile selection
+    router.push("/login");
   }, [router]);
+
+  const session: SessionUser | null = activeProfile
+    ? {
+        id: activeProfile.id,
+        name: activeProfile.name,
+        email: activeProfile.email,
+      }
+    : null;
 
   return (
     <AuthContext.Provider
       value={{
         session,
+        user: activeProfile,
+        profiles,
+        activeProfile,
+        activeEvent: events[0] || null,
         loading,
         events,
         loadingEvents,
         refreshSession,
         refreshEvents,
+        switchProfile,
+        createProfile,
+        removeProfile,
         logout,
       }}
     >

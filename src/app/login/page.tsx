@@ -3,66 +3,31 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { ToastNotification } from "@/components/ui/ToastNotification";
-import { Sparkles, LogIn } from "lucide-react";
+import { Badge } from "@/components/ui/Badge";
+import { useAuth } from "@/components/layout/AuthContext";
+import { User, Check, Plus, ArrowRight, HardDrive } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const { profiles, activeProfile, switchProfile } = useAuth();
+  const [selectedId, setSelectedId] = useState<string>(activeProfile?.id || "");
   const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name as keyof typeof errors]) {
-      setErrors((prev) => ({ ...prev, [name]: undefined }));
+  const handleSelectProfile = async (id: string) => {
+    setSelectedId(id);
+    setLoading(true);
+    try {
+      await switchProfile(id);
+      router.push("/dashboard");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMessage(null);
-
-    const newErrors: typeof errors = {};
-    if (!formData.email.trim()) newErrors.email = "Email address is required";
-    if (!formData.password) newErrors.password = "Password is required";
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setErrorMessage(data.error || "Authentication failed.");
-        setLoading(false);
-        return;
-      }
-
-      router.push("/dashboard");
-      router.refresh();
-    } catch {
-      setErrorMessage("Network error. Please try again.");
-      setLoading(false);
-    }
+  const handleContinueActive = () => {
+    router.push("/dashboard");
   };
 
   return (
@@ -70,59 +35,83 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
           <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 text-white shadow-[0_4px_14px_rgba(124,58,237,0.35),inset_0_1px_1px_rgba(255,255,255,0.4)]">
-            <Sparkles className="h-6 w-6" />
+            <User className="h-6 w-6" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-surface-900">Welcome Back</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-surface-900">Select Local Profile</h1>
           <p className="text-sm text-surface-500">
-            Sign in to access your event plans, timelines, and budgets.
+            Choose a planner profile on this browser to access your local events and budgets.
           </p>
         </div>
 
-        {errorMessage && (
-          <ToastNotification
-            type="error"
-            title="Sign In Failed"
-            message={errorMessage}
-            onDismiss={() => setErrorMessage(null)}
-          />
-        )}
+        <div className="rounded-xl p-3 bg-surface-100/90 border border-surface-200/90 text-xs text-surface-600 flex items-start gap-2.5">
+          <HardDrive className="h-4 w-4 text-surface-500 mt-0.5 shrink-0" />
+          <div>
+            <span className="font-semibold text-surface-800">Browser-Local Storage:</span> Profiles are stored locally in your browser&apos;s IndexedDB. No passwords or server connections are needed.
+          </div>
+        </div>
 
-        <Card className="p-6 sm:p-8 glass-surface-elevated shadow-glass-elevated specular-top">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <Input
-              label="Email Address"
-              required
-              type="email"
-              name="email"
-              placeholder="you@example.com"
-              value={formData.email}
-              onChange={handleChange}
-              error={errors.email}
-            />
+        <Card className="p-6 glass-surface-elevated shadow-glass-elevated specular-top space-y-4">
+          <div className="space-y-2.5">
+            {profiles.map((p) => {
+              const isActive = (selectedId || activeProfile?.id) === p.id;
+              return (
+                <div
+                  key={p.id}
+                  onClick={() => handleSelectProfile(p.id)}
+                  className={`flex items-center justify-between p-3.5 rounded-xl border transition-all cursor-pointer ${
+                    isActive
+                      ? "bg-primary-50/80 border-primary-300 shadow-sm"
+                      : "bg-white/60 hover:bg-white border-surface-200/90 hover:border-surface-300"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-bold text-sm">
+                      {p.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="font-semibold text-surface-900 text-sm flex items-center gap-2">
+                        {p.name}
+                        {p.isDefault && <Badge variant="secondary">Default</Badge>}
+                      </div>
+                      <div className="text-xs text-surface-500">{p.email}</div>
+                    </div>
+                  </div>
 
-            <Input
-              label="Password"
-              required
-              type="password"
-              name="password"
-              placeholder="Your password"
-              value={formData.password}
-              onChange={handleChange}
-              error={errors.password}
-            />
+                  {isActive ? (
+                    <span className="h-6 w-6 rounded-full bg-primary-600 text-white flex items-center justify-center">
+                      <Check className="h-3.5 w-3.5" />
+                    </span>
+                  ) : (
+                    <span className="text-xs text-primary-600 font-medium">Select</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
 
-            <div className="pt-2">
-              <Button type="submit" size="lg" className="w-full justify-center gap-2" isLoading={loading}>
-                <LogIn className="h-4 w-4" />
-                <span>Sign In</span>
+          <div className="pt-2 flex flex-col gap-2.5">
+            <Button
+              type="button"
+              variant="primary"
+              size="lg"
+              isLoading={loading}
+              onClick={handleContinueActive}
+              className="w-full font-semibold shadow-glass-glow flex items-center justify-center gap-2"
+            >
+              <span>Continue as {activeProfile?.name || "Planner"}</span>
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+
+            <Link href="/register">
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                className="w-full flex items-center justify-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Create Another Profile</span>
               </Button>
-            </div>
-          </form>
-
-          <div className="mt-6 border-t border-surface-100 pt-4 text-center text-xs text-surface-500">
-            Don&apos;t have an account?{" "}
-            <Link href="/register" className="font-semibold text-primary-600 hover:text-primary-700">
-              Create an account
             </Link>
           </div>
         </Card>

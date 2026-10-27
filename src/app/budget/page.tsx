@@ -39,15 +39,26 @@ interface EventItem {
   status: string;
 }
 
+import { useAuth } from "@/components/layout/AuthContext";
+import {
+  getLocalEvent,
+  getLocalBudgetCategories,
+  getLocalExpenses,
+  createLocalBudgetCategory,
+  setLocalBulkAllocations,
+  deleteLocalBudgetCategory,
+  createLocalExpense,
+  updateLocalExpense,
+  deleteLocalExpense,
+} from "@/lib/storage/local-repository";
+import { computeOverallBudgetSummary } from "@/lib/budget/financial-engine";
+
 function BudgetContent() {
   const searchParams = useSearchParams();
   const urlEventId = searchParams.get("eventId");
+  const { events, user, loadingEvents } = useAuth();
 
-  const [events, setEvents] = useState<EventItem[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(urlEventId);
-  const [loadingEvents, setLoadingEvents] = useState(true);
-  const [isUnauthenticated, setIsUnauthenticated] = useState(false);
-
   const [budgetData, setBudgetData] = useState<{
     event: EventItem;
     summary: OverallBudgetSummary;
@@ -63,53 +74,78 @@ function BudgetContent() {
   const [isCreateCategoryModalOpen, setIsCreateCategoryModalOpen] = useState(false);
   const [, startTransition] = useTransition();
 
-  // Load user events
-  const loadEvents = useCallback(async () => {
-    try {
-      setLoadingEvents(true);
-      setError(null);
-      const res = await fetch("/api/events");
-      if (res.status === 401) {
-        setIsUnauthenticated(true);
-        setEvents([]);
-        return;
-      }
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        setError(errJson.error || "Unable to load events.");
-        setEvents([]);
-        return;
-      }
-      const data = await res.json();
-      const evList = data.events || [];
-      setEvents(evList);
-
-      if (evList.length > 0) {
-        setSelectedEventId((prev) => (prev && evList.some((e: EventItem) => e.id === prev) ? prev : evList[0].id));
-      }
-    } catch (err: unknown) {
-      console.error(err);
-      setError("Unable to load events. Please check your connection or sign in.");
-      setEvents([]);
-    } finally {
-      setLoadingEvents(false);
+  // Keep selected event synced
+  useEffect(() => {
+    if (!selectedEventId && events.length > 0) {
+      setSelectedEventId(events[0].id);
     }
-  }, []);
+  }, [events, selectedEventId]);
 
-  // Load budget overview for selected event
+  // Load budget overview for selected event directly from local storage
   const loadBudget = useCallback(async (eventId: string) => {
     try {
       setLoadingBudget(true);
       setError(null);
-      const res = await fetch(`/api/events/${eventId}/budget`);
-      if (!res.ok) {
-        const errJson = await res.json();
-        throw new Error(errJson.error || "Failed to load budget");
+
+      const [ev, categories, expenses] = await Promise.all([
+        getLocalEvent(eventId),
+        getLocalBudgetCategories(eventId),
+        getLocalExpenses(eventId),
+      ]);
+
+      if (!ev) {
+        throw new Error("Event not found in local browser storage.");
       }
-      const data = await res.json();
-      setBudgetData(data);
+
+      // Compute deterministic overall summary using cents math engine
+      const summary = computeOverallBudgetSummary(
+        ev.totalBudget,
+        ev.currency,
+        categories.map((c) => ({
+          id: c.id,
+          name: c.name,
+          allocatedAmount: c.allocatedCents / 100,
+          allocatedPercentage: c.allocatedPercentage,
+          estimatedAmount: c.allocatedCents / 100,
+        })),
+        expenses.map((e) => ({
+          id: e.id,
+          budgetCategoryId: e.categoryId,
+          amount: e.amountCents / 100,
+          name: e.title,
+          dateIncurred: e.createdAt,
+        })),
+        80
+      );
+
+      const mappedExpenses: ExpenseRecord[] = expenses.map((e) => {
+        const cat = categories.find((c) => c.id === e.categoryId);
+        return {
+          id: e.id,
+          budgetCategoryId: e.categoryId,
+          categoryName: cat ? cat.name : "Uncategorized",
+          name: e.title,
+          amount: e.amountCents / 100,
+          dateIncurred: e.createdAt,
+          paymentStatus: e.paymentStatus,
+          notes: e.notes || null,
+        };
+      });
+
+      setBudgetData({
+        event: {
+          id: ev.id,
+          title: ev.title,
+          type: ev.type,
+          totalBudget: ev.totalBudget,
+          currency: ev.currency,
+          status: ev.status,
+        },
+        summary,
+        expenses: mappedExpenses,
+      });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to load budget.";
+      const msg = err instanceof Error ? err.message : "Failed to load local budget.";
       setError(msg);
       setBudgetData(null);
     } finally {
@@ -118,29 +154,27 @@ function BudgetContent() {
   }, []);
 
   useEffect(() => {
-    loadEvents();
-  }, [loadEvents]);
-
-  useEffect(() => {
     if (selectedEventId) {
       loadBudget(selectedEventId);
+    } else {
+      setLoadingBudget(false);
     }
   }, [selectedEventId, loadBudget]);
 
   // Save bulk allocations
   const handleSaveAllocations = async (allocations: { id: string; allocatedAmount: number }[]) => {
     if (!selectedEventId) return;
-    const res = await fetch(`/api/events/${selectedEventId}/budget?action=bulk-allocations`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ categories: allocations }),
+    const catAllocations = allocations.map((a) => {
+      const total = budgetData?.event.totalBudget || 1;
+      const pct = (a.allocatedAmount / total) * 100;
+      return {
+        categoryId: a.id,
+        allocatedAmount: a.allocatedAmount,
+        allocatedPercentage: Number(pct.toFixed(1)),
+      };
     });
 
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || "Failed to update category allocations.");
-    }
-
+    await setLocalBulkAllocations(selectedEventId, catAllocations);
     await loadBudget(selectedEventId);
     setIsAllocationEditorOpen(false);
   };
@@ -148,17 +182,7 @@ function BudgetContent() {
   // Create new category
   const handleCreateCategory = async (catData: { name: string; allocatedAmount: number }) => {
     if (!selectedEventId) return;
-    const res = await fetch(`/api/events/${selectedEventId}/budget?action=category`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(catData),
-    });
-
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || "Failed to create category.");
-    }
-
+    await createLocalBudgetCategory(selectedEventId, catData.name, catData.allocatedAmount);
     await loadBudget(selectedEventId);
   };
 
@@ -173,24 +197,23 @@ function BudgetContent() {
   }) => {
     if (!selectedEventId) return;
 
-    let res: Response;
     if (editingExpense) {
-      res = await fetch(`/api/events/${selectedEventId}/budget/expenses/${editingExpense.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+      await updateLocalExpense(editingExpense.id, {
+        categoryId: data.budgetCategoryId,
+        title: data.name,
+        amount: data.amount,
+        paymentStatus: data.paymentStatus,
+        notes: data.notes,
       });
     } else {
-      res = await fetch(`/api/events/${selectedEventId}/budget?action=expense`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+      await createLocalExpense({
+        eventId: selectedEventId,
+        categoryId: data.budgetCategoryId,
+        title: data.name,
+        amount: data.amount,
+        paymentStatus: data.paymentStatus,
+        notes: data.notes,
       });
-    }
-
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || "Failed to save expense.");
     }
 
     await loadBudget(selectedEventId);
@@ -200,16 +223,7 @@ function BudgetContent() {
   // Delete expense
   const handleDeleteExpense = async (expenseId: string) => {
     if (!selectedEventId) return;
-    const res = await fetch(`/api/events/${selectedEventId}/budget/expenses/${expenseId}`, {
-      method: "DELETE",
-    });
-
-    if (!res.ok) {
-      const err = await res.json();
-      alert(err.error || "Failed to delete expense.");
-      return;
-    }
-
+    await deleteLocalExpense(expenseId);
     await loadBudget(selectedEventId);
   };
 
@@ -218,16 +232,7 @@ function BudgetContent() {
     if (!selectedEventId) return;
     if (!confirm(`Are you sure you want to delete category "${categoryName}"?`)) return;
 
-    const res = await fetch(`/api/events/${selectedEventId}/budget/categories/${categoryId}`, {
-      method: "DELETE",
-    });
-
-    if (!res.ok) {
-      const err = await res.json();
-      alert(err.error || "Failed to delete category.");
-      return;
-    }
-
+    await deleteLocalBudgetCategory(categoryId);
     await loadBudget(selectedEventId);
   };
 
@@ -239,7 +244,7 @@ function BudgetContent() {
     );
   }
 
-  if (isUnauthenticated) {
+  if (!user) {
     return (
       <div className="space-y-6">
         <PageHeader
@@ -248,9 +253,9 @@ function BudgetContent() {
         />
         <EmptyState
           icon={PieChart}
-          title="Sign in required"
-          description="Please sign in or create an account to view and manage your event budgets and expenses."
-          actionLabel="Sign In"
+          title="Local profile required"
+          description="Please select or create a local browser profile to view and manage your event budgets and expenses."
+          actionLabel="Select Profile"
           actionHref="/login"
         />
       </div>

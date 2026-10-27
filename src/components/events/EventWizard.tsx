@@ -4,6 +4,13 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { EventFormData, EventType } from "@/types";
 import { Step1Schema, Step2Schema, Step3Schema, Step4Schema } from "@/lib/validations";
+import { useAuth } from "@/components/layout/AuthContext";
+import {
+  getLocalEvent,
+  createLocalEvent,
+  updateLocalEvent,
+  generateAndSaveLocalPlan,
+} from "@/lib/storage/local-repository";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Select } from "@/components/ui/Select";
@@ -47,6 +54,7 @@ export function EventWizard() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const resumeId = searchParams.get("resumeId");
+  const { activeProfile, refreshEvents } = useAuth();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [draftId, setDraftId] = useState<string | null>(resumeId);
@@ -88,29 +96,25 @@ export function EventWizard() {
   useEffect(() => {
     if (!resumeId) return;
 
-    fetch(`/api/events/${resumeId}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Draft not found");
-        return res.json();
-      })
-      .then((data) => {
-        const ev = data.event;
+    setLoadingDraft(true);
+    getLocalEvent(resumeId)
+      .then((ev) => {
+        if (!ev) throw new Error("Draft not found");
         setDraftId(ev.id);
-        const notes = ev.preferences?.additionalNotes;
         setFormData({
           type: ev.type,
           title: ev.title,
-          description: ev.description || "",
+          description: "",
           eventDate: ev.eventDate ? ev.eventDate.split("T")[0] : "",
           location: ev.location || "",
           guestCount: ev.guestCount || 50,
           totalBudget: Number(ev.totalBudget) || 10000,
           currency: ev.currency || "USD",
-          themePreferences: ev.preferences?.themeDescription || "",
-          culturalPreferences: notes?.cultural || "",
+          themePreferences: ev.preferences?.themePreferences || "",
+          culturalPreferences: ev.preferences?.culturalPreferences || "",
           dietaryRestrictions: ev.preferences?.dietaryRestrictions || "",
           accessibilityRequirements: ev.preferences?.accessibilityRequirements || "",
-          specialInstructions: notes?.notes || (typeof notes === "string" ? notes : ""),
+          specialInstructions: ev.preferences?.specialInstructions || "",
         });
         setNotification({
           type: "info",
@@ -224,65 +228,60 @@ export function EventWizard() {
 
       try {
         if (draftId) {
-          // Update existing draft
-          const res = await fetch(`/api/events/${draftId}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(formData),
+          // Update existing draft in IndexedDB
+          await updateLocalEvent(draftId, {
+            title: formData.title || "Untitled Draft",
+            type: formData.type,
+            eventDate: formData.eventDate || null,
+            location: formData.location || null,
+            guestCount: formData.guestCount || 1,
+            totalBudget: formData.totalBudget || 0,
+            currency: formData.currency || "USD",
+            preferences: {
+              themePreferences: formData.themePreferences,
+              culturalPreferences: formData.culturalPreferences,
+              dietaryRestrictions: formData.dietaryRestrictions,
+              accessibilityRequirements: formData.accessibilityRequirements,
+              specialInstructions: formData.specialInstructions,
+            },
           });
-
-          // Discard response if a newer save was initiated in the meantime
-          if (thisSeq < saveSeqRef.current) return false;
-
-          if (!res.ok) {
-            const errData = await res.json().catch(() => ({}));
-            throw new Error(errData.error || "Failed to update draft");
-          }
-
-          setSaveStatus("saved");
-          setHasUnsavedChanges(false);
-          setLastSavedTime(
-            new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
-          );
-          return true;
         } else {
-          // Create initial draft
-          const res = await fetch("/api/events", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(formData),
-          });
+          // Create initial draft in IndexedDB
+          const profileId = activeProfile?.id || "prof_default";
+          const created = await createLocalEvent(
+            {
+              title: formData.title || "Untitled Draft",
+              type: formData.type,
+              eventDate: formData.eventDate || null,
+              location: formData.location || null,
+              guestCount: formData.guestCount || 1,
+              totalBudget: formData.totalBudget || 0,
+              currency: formData.currency || "USD",
+              themePreferences: formData.themePreferences,
+              culturalPreferences: formData.culturalPreferences,
+              dietaryRestrictions: formData.dietaryRestrictions,
+              accessibilityRequirements: formData.accessibilityRequirements,
+              specialInstructions: formData.specialInstructions,
+            },
+            profileId
+          );
 
           if (thisSeq < saveSeqRef.current) return false;
-
-          if (res.status === 401) {
-            setSaveStatus("error");
-            setServerError("Authentication required. Please sign in to save your draft.");
-            setNotification({
-              type: "warning",
-              title: "Sign In Required",
-              message: "Please sign in to persist your event plan across sessions.",
-            });
-            return false;
-          }
-
-          if (!res.ok) {
-            const errData = await res.json().catch(() => ({}));
-            throw new Error(errData.error || "Failed to create draft");
-          }
-
-          const data = await res.json();
-          setDraftId(data.event.id);
-          setSaveStatus("saved");
-          setHasUnsavedChanges(false);
-          setLastSavedTime(
-            new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
-          );
-          return true;
+          setDraftId(created.id);
         }
+
+        if (thisSeq < saveSeqRef.current) return false;
+
+        await refreshEvents();
+        setSaveStatus("saved");
+        setHasUnsavedChanges(false);
+        setLastSavedTime(
+          new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+        );
+        return true;
       } catch (err: unknown) {
         if (thisSeq < saveSeqRef.current) return false;
-        const msg = err instanceof Error ? err.message : "Unable to reach database server.";
+        const msg = err instanceof Error ? err.message : "Failed to persist draft locally.";
         setSaveStatus("error");
         setServerError(msg);
         if (!silent) {
@@ -295,7 +294,7 @@ export function EventWizard() {
         return false;
       }
     },
-    [formData, draftId]
+    [formData, draftId, activeProfile, refreshEvents]
   );
 
   // Debounced autosave effect when form data changes (every 2.5s)
@@ -370,14 +369,8 @@ export function EventWizard() {
 
     setIsGeneratingPlan(true);
     try {
-      const res = await fetch(`/api/events/${targetId}/plan`, {
-        method: "POST",
-      });
-
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.error || "Plan generation failed");
-      }
+      await generateAndSaveLocalPlan(targetId);
+      await refreshEvents();
 
       setNotification({
         type: "success",

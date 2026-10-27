@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { VENDOR_CATEGORIES } from "@/lib/vendors/schemas";
-import { VendorStatus } from "@prisma/client";
+import { VendorStatus } from "@/lib/storage/types";
 import { type VendorWithQuotes } from "@/lib/vendors/vendor-service";
 
 interface VendorModalProps {

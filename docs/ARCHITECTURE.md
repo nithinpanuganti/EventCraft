@@ -86,7 +86,7 @@ graph TB
 | **3. Event Management** | CRUD operations for events, user preferences, status tracking (`PLANNING`, `ACTIVE`, `COMPLETED`, `ARCHIVED`). | Prisma ORM, PostgreSQL |
 | **4. AI Planning Service** | Provider-independent architecture (`PlanningService`, `PlanningProvider`) supporting official Google Gemini & OpenAI SDKs. Prompt injection sanitization (`buildPlanningContext`), Zod schema validation (`GeneratedEventPlanSchema`), deterministic cents-level budget balancing & timeline calculation (`validateAndNormalizePlan`), and domain fallback recovery (`FallbackPlanService`). | `@google/generative-ai`, `openai`, `zod`, Curated Templates |
 | **5. Budget Engine (Deterministic)** | Fixed-precision addition/subtraction, category percentage-to-dollar conversions, integer minor units (cents) rounding reconciliation, actual expense tracking, remaining balance calculations, budget overrun flag generation. | TypeScript core math (cents/integers) |
-| **6. Timeline & Task Engine** | Milestone grouping, relative date offsets (e.g., `eventDate - 30 days`), status state machine (`TODO` &rarr; `IN_PROGRESS` &rarr; `DONE`), day-of run-of-show chronology. | Date utilities (`date-fns`) |
+| **6. Timeline & Task Engine** | Milestone grouping, relative date offsets (e.g., `eventDate - 30 days`), status state machine (`TODO` &rarr; `IN_PROGRESS` &rarr; `DONE`), day-of run-of-show chronology. | Native Date & `Intl.DateTimeFormat` |
 | **7. Vendor Management** | Category assignment, quote tracking, contact directory, status pipeline (`RESEARCHING` &rarr; `QUOTED` &rarr; `BOOKED`). | Prisma ORM |
 | **8. Validation & Error Handling** | Client and server-side request sanitization, AI schema enforcement, standard HTTP error responses. | Zod |
 

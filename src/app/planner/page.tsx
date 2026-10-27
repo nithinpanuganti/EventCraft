@@ -9,153 +9,149 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { PlanViewer } from "@/components/events/PlanViewer";
 import { ConversationalRevisionPanel } from "@/components/planner/ConversationalRevisionPanel";
-import {
-  GeneratedEventPlan,
-  PlanMilestone,
-  PlanTask,
-  PlanDayOfScheduleItem,
-  PlanVendorItem,
-} from "@/lib/planning/schema";
+import { GeneratedEventPlan } from "@/lib/planning/schema";
 import { Sparkles, Calendar, PlusCircle, AlertCircle } from "lucide-react";
 import Link from "next/link";
-
-interface EventItem {
-  id: string;
-  title: string;
-  type: string;
-  status: string;
-}
+import { useAuth } from "@/components/layout/AuthContext";
+import {
+  getLocalEvent,
+  getLocalPlan,
+  generateAndSaveLocalPlan,
+} from "@/lib/storage/local-repository";
 
 function PlannerContent() {
   const searchParams = useSearchParams();
   const eventIdParam = searchParams.get("eventId");
+  const { events, user, refreshEvents } = useAuth();
 
-  const [events, setEvents] = useState<EventItem[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(eventIdParam);
   const [currentPlan, setCurrentPlan] = useState<GeneratedEventPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isUnauthenticated, setIsUnauthenticated] = useState(false);
 
-  // 1. Fetch user's saved events
+  // Sync selected event when events load
   useEffect(() => {
-    fetch("/api/events")
-      .then(async (res) => {
-        if (res.status === 401) {
-          setIsUnauthenticated(true);
-          return { events: [] };
-        }
-        if (!res.ok) {
-          const errJson = await res.json().catch(() => ({}));
-          throw new Error(errJson.error || "Failed to load events");
-        }
-        return res.json();
-      })
-      .then((data) => {
-        const evList: EventItem[] = data.events || [];
-        setEvents(evList);
-        if (!selectedEventId && evList.length > 0) {
-          setSelectedEventId(evList[0].id);
-        }
-      })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, [selectedEventId]);
+    if (!selectedEventId && events.length > 0) {
+      setSelectedEventId(events[0].id);
+    }
+  }, [events, selectedEventId]);
 
-  // 2. Fetch selected event details and plan
-  const loadEventPlan = useCallback((evId: string) => {
+  // 2. Fetch selected event details and plan from local storage
+  const loadEventPlan = useCallback(async (evId: string) => {
     setLoading(true);
     setError(null);
-    fetch(`/api/events/${evId}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Could not retrieve event");
-        return res.json();
-      })
-      .then((data) => {
-        const ev = data.event;
-        if (ev?.plan?.aiRecommendations) {
-          const recs = ev.plan.aiRecommendations as Record<string, unknown>;
-          const summaryObj = (recs.summary as Record<string, unknown>) || {};
-          const themeObj = (recs.theme as Record<string, unknown>) || {};
-          const budgetObj = (recs.budget as Record<string, unknown>) || {};
-          const risksObj = (recs.risksAndAlternatives as Record<string, unknown>) || {};
-          const metaObj = (recs.metadata as Record<string, unknown>) || {};
 
-          setCurrentPlan({
-            summary: {
-              conceptTitle: ev.plan.conceptTitle,
-              conceptNarrative: ev.plan.conceptNarrative,
-              planningAssumptions: Array.isArray(summaryObj.planningAssumptions) ? summaryObj.planningAssumptions : [],
-              keyRecommendations: Array.isArray(summaryObj.keyRecommendations) ? summaryObj.keyRecommendations : [],
-            },
-            theme: {
-              themeName: typeof themeObj.themeName === "string" ? themeObj.themeName : "Celebration Concept",
-              colorPalette: Array.isArray(themeObj.colorPalette) ? themeObj.colorPalette : ["#333", "#666"],
-              styleDirection: typeof themeObj.styleDirection === "string" ? themeObj.styleDirection : "",
-              decorationIdeas: Array.isArray(themeObj.decorationIdeas) ? themeObj.decorationIdeas : [],
-              personalizedActivities: Array.isArray(themeObj.personalizedActivities) ? themeObj.personalizedActivities : [],
-              culturalConsiderations: Array.isArray(themeObj.culturalConsiderations) ? themeObj.culturalConsiderations : [],
-            },
-            budget: {
-              totalBudget: Number(budgetObj.totalBudget || ev.totalBudget),
-              currency: String(budgetObj.currency || ev.currency),
-              categories: Array.isArray(budgetObj.categories) ? budgetObj.categories : [],
-              contingencyPercentage: Number(budgetObj.contingencyPercentage) || 5,
-              isBalanced: true,
-            },
-            milestones: Array.isArray(recs.milestones) ? (recs.milestones as PlanMilestone[]) : [],
-            tasks: Array.isArray(recs.tasks) ? (recs.tasks as PlanTask[]) : [],
-            dayOfSchedule: Array.isArray(ev.plan.dayOfSchedule)
-              ? (ev.plan.dayOfSchedule as PlanDayOfScheduleItem[])
-              : [],
-            vendors: Array.isArray(recs.vendors) ? (recs.vendors as PlanVendorItem[]) : [],
-            risksAndAlternatives: {
-              potentialRisks: Array.isArray(risksObj.potentialRisks) ? risksObj.potentialRisks : [],
-              mitigations: Array.isArray(risksObj.mitigations) ? risksObj.mitigations : [],
-              budgetSavingTips: Array.isArray(risksObj.budgetSavingTips) ? risksObj.budgetSavingTips : [],
-              optionalUpgrades: Array.isArray(risksObj.optionalUpgrades) ? risksObj.optionalUpgrades : [],
-            },
-            metadata: {
-              source: metaObj.source === "curated-fallback" ? "curated-fallback" : "ai-generated",
-              provider: typeof metaObj.provider === "string" ? metaObj.provider : "System",
-              model: typeof metaObj.model === "string" ? metaObj.model : "default",
-              version: ev.plan.version || 1,
-              generatedAt: ev.plan.updatedAt || new Date().toISOString(),
-            },
-          });
-        } else {
-          setCurrentPlan(null);
-        }
-      })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
+    try {
+      const [ev, plan] = await Promise.all([
+        getLocalEvent(evId),
+        getLocalPlan(evId),
+      ]);
+
+      if (!ev) {
+        throw new Error("Could not find event in local browser storage.");
+      }
+
+      if (plan) {
+        // Map LocalEventPlan to GeneratedEventPlan format for PlanViewer
+        setCurrentPlan({
+          summary: {
+            conceptTitle: plan.conceptTitle,
+            conceptNarrative: plan.conceptNarrative,
+            planningAssumptions: plan.planningAssumptions || [],
+            keyRecommendations: plan.keyRecommendations || [],
+          },
+          theme: {
+            themeName: plan.themeName,
+            colorPalette: plan.colorPalette,
+            styleDirection: plan.styleDirection,
+            decorationIdeas: plan.decorationIdeas,
+            personalizedActivities: plan.personalizedActivities,
+            culturalConsiderations: plan.culturalConsiderations,
+          },
+          budget: {
+            totalBudget: ev.totalBudget,
+            currency: ev.currency,
+            categories: (ev.budgetCategories || []).map((c) => ({
+              categoryName: c.name,
+              allocatedPercentage: c.allocatedPercentage,
+              allocatedAmount: c.allocatedCents / 100,
+              estimatedAmount: c.allocatedCents / 100,
+              rationale: c.rationale || "",
+            })),
+            contingencyPercentage: 5,
+            isBalanced: true,
+          },
+          milestones: [
+            { title: "Venue & Budget Baseline", phase: "PLANNING", offsetDays: -180, description: "Establish venue and budget baseline", priority: "CRITICAL" },
+            { title: "Engage Primary Vendors", phase: "BOOKING", offsetDays: -120, description: "Engage primary vendors", priority: "HIGH" },
+            { title: "Confirm Headcount & Decor", phase: "PREPARATION", offsetDays: -45, description: "Confirm final headcounts and decor", priority: "MEDIUM" },
+            { title: "Run-of-Show Execution", phase: "EVENT_DAY", offsetDays: 0, description: "Day-of execution according to run-sheet", priority: "CRITICAL" },
+            { title: "Vendor Settlements", phase: "POST_EVENT", offsetDays: 7, description: "Settlements, return rentals, and thank yous", priority: "LOW" },
+          ],
+          tasks: (ev.tasks || []).map((t, idx) => ({
+            title: t.title,
+            phase: t.phase,
+            priority: t.priority,
+            offsetDays: -(30 + idx * 5),
+            dueDate: t.dueDate || undefined,
+            description: t.description || "",
+          })),
+          dayOfSchedule: (plan.dayOfSchedule || []).map((item) => ({
+            time: item.time || item.timeSlot || "09:00",
+            activity: item.activity,
+            lead: item.lead || item.leadCoordinator || "Lead Coordinator",
+            notes: item.notes || item.logisticalNotes || undefined,
+          })),
+          vendors: ((ev.vendors || []) as Array<{ categoryName?: string; category?: string; companyName?: string; name?: string }>).map((v) => ({
+            categoryName: v.categoryName || v.category || "General Services",
+            justification: `Core vendor service: ${v.companyName || v.name || "Vendor"}`,
+            selectionCriteria: ["Reputation", "Contract terms"],
+            questionsToAsk: ["Cancellation policy", "Overtime charges"],
+            recommendedMilestone: "Booking Phase",
+          })),
+          risksAndAlternatives: {
+            potentialRisks: ["Inclement weather", "Vendor scheduling delay"],
+            mitigations: ["Reserve indoor alternative space", "Confirm backup contacts 14 days prior"],
+            budgetSavingTips: ["Prioritize high-impact elements", "Opt for seasonal florals"],
+            optionalUpgrades: ["Live acoustic trio", "Custom dessert bar"],
+          },
+          metadata: {
+            source: "curated-fallback",
+            provider: "Local Rule Engine",
+            model: "Deterministic Template Rules",
+            version: plan.version || 1,
+            generatedAt: plan.updatedAt || new Date().toISOString(),
+          },
+        });
+      } else {
+        setCurrentPlan(null);
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to load local plan.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
     if (selectedEventId) {
       loadEventPlan(selectedEventId);
+    } else {
+      setLoading(false);
     }
   }, [selectedEventId, loadEventPlan]);
 
-  // 3. Generate or regenerate plan
+  // 3. Generate or regenerate plan locally
   const handleGeneratePlan = async () => {
     if (!selectedEventId) return;
     setGenerating(true);
     setError(null);
 
     try {
-      const res = await fetch(`/api/events/${selectedEventId}/plan`, {
-        method: "POST",
-      });
-
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.error || "Plan generation failed.");
-      }
-
-      const data = await res.json();
-      setCurrentPlan(data.plan);
+      await generateAndSaveLocalPlan(selectedEventId);
+      await refreshEvents();
+      await loadEventPlan(selectedEventId);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Plan generation failed.");
     } finally {
@@ -239,12 +235,12 @@ function PlannerContent() {
           <Skeleton className="h-24 w-full rounded-xl" />
           <Skeleton className="h-64 w-full rounded-xl" />
         </div>
-      ) : isUnauthenticated ? (
+      ) : !user ? (
         <EmptyState
           icon={Calendar}
-          title="Sign in required"
-          description="Please sign in or create an account to view and generate AI event plans."
-          actionLabel="Sign In"
+          title="Local profile required"
+          description="Please select or create a local browser profile to view and generate event plans."
+          actionLabel="Select Profile"
           actionHref="/login"
         />
       ) : events.length === 0 ? (

@@ -19,12 +19,23 @@ if not exist "node_modules\.prisma\client\query_engine-windows.dll.node" (
 )
 
 echo.
-echo [2/3] Checking environment configuration...
+echo [2/3] Checking environment configuration and database connectivity...
 if not exist .env (
     if exist .env.example (
         echo [INFO] .env not found. Copying .env.example to .env...
         copy .env.example .env >nul
     )
+)
+
+:: Check if PostgreSQL port 5432 is reachable
+powershell -NoProfile -Command "$t = Test-NetConnection -ComputerName localhost -Port 5432 -InformationLevel Quiet; if (-not $t) { exit 1 }" >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [WARN] PostgreSQL is not currently reachable on localhost:5432.
+    echo        If using Docker: run 'docker compose up -d'
+    echo        If using Windows service: run 'Start-Service postgresql*'
+    echo        The app will run in offline mode (fallbacks active; registration requires DB).
+) else (
+    echo [INFO] PostgreSQL database server is reachable on localhost:5432.
 )
 
 echo.

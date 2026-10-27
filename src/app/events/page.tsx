@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -10,45 +10,12 @@ import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { CalendarDays, PlusCircle, Users, DollarSign, LogIn, ArrowRight } from "lucide-react";
 import { formatDate, formatCurrency } from "@/lib/utils";
-
-interface EventItem {
-  id: string;
-  title: string;
-  type: "WEDDING" | "BIRTHDAY" | "COMMUNITY";
-  eventDate?: string | null;
-  location?: string | null;
-  guestCount: number;
-  totalBudget: number;
-  currency: string;
-  status: string;
-  updatedAt: string;
-  _count?: {
-    budgetCategories: number;
-    tasks: number;
-    vendors: number;
-    guests: number;
-  };
-}
+import { useAuth } from "@/components/layout/AuthContext";
 
 export default function MyEventsPage() {
-  const [events, setEvents] = useState<EventItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isUnauthenticated, setIsUnauthenticated] = useState(false);
-
-  useEffect(() => {
-    fetch("/api/events")
-      .then(async (res) => {
-        if (res.status === 401) {
-          setIsUnauthenticated(true);
-          return [];
-        }
-        const data = await res.json();
-        return data.events || [];
-      })
-      .then((data) => setEvents(data))
-      .catch(() => setEvents([]))
-      .finally(() => setLoading(false));
-  }, []);
+  const { events, loadingEvents } = useAuth();
+  const loading = loadingEvents;
+  const isUnauthenticated = false;
 
   return (
     <div className="space-y-6 animate-page-enter">

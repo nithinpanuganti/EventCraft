@@ -14,7 +14,18 @@ import { TaskCard } from "@/components/timeline/TaskCard";
 import { RunSheetViewer, type DayOfActivity } from "@/components/timeline/RunSheetViewer";
 import { type TaskWithDependencies } from "@/lib/timeline/timeline-service";
 import { CanonicalTaskStatus } from "@/lib/timeline/task-state-machine";
-import { TaskPhase, TaskPriority, TaskStatus } from "@prisma/client";
+import { TaskPhase, TaskPriority, TaskStatus } from "@/lib/storage/types";
+import {
+  getLocalEvents,
+  getLocalTasksWithDependencies,
+  createLocalTask,
+  updateLocalTask,
+  updateLocalTaskStatus,
+  deleteLocalTask,
+  getLocalRunSheet,
+  saveLocalRunSheet,
+} from "@/lib/storage/local-repository";
+import { useAuth } from "@/components/layout/AuthContext";
 import {
   Calendar,
   CheckCircle2,
@@ -29,7 +40,7 @@ interface EventItem {
   id: string;
   title: string;
   type: string;
-  eventDate: string | null;
+  eventDate?: string | null;
   status: string;
 }
 
@@ -44,11 +55,11 @@ const PHASES: { key: TaskPhase; label: string; desc: string }[] = [
 function TimelineContent() {
   const searchParams = useSearchParams();
   const urlEventId = searchParams.get("eventId");
+  const { user, activeEvent } = useAuth();
 
   const [events, setEvents] = useState<EventItem[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(urlEventId);
   const [loadingEvents, setLoadingEvents] = useState(true);
-  const [isUnauthenticated, setIsUnauthenticated] = useState(false);
 
   // Tasks state
   const [tasks, setTasks] = useState<TaskWithDependencies[]>([]);
@@ -73,38 +84,25 @@ function TimelineContent() {
   const [editingTask, setEditingTask] = useState<TaskWithDependencies | null>(null);
   const [, startTransition] = useTransition();
 
-  // Load user events
+  // Load user events from local IndexedDB
   const loadEvents = useCallback(async () => {
     try {
       setLoadingEvents(true);
       setError(null);
-      const res = await fetch("/api/events");
-      if (res.status === 401) {
-        setIsUnauthenticated(true);
-        setEvents([]);
-        return;
-      }
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        setError(errJson.error || "Unable to load events.");
-        setEvents([]);
-        return;
-      }
-      const data = await res.json();
-      const evList = data.events || [];
+      const evList = await getLocalEvents(user?.id);
       setEvents(evList);
 
       if (evList.length > 0) {
-        setSelectedEventId((prev) => (prev && evList.some((e: EventItem) => e.id === prev) ? prev : evList[0].id));
+        setSelectedEventId((prev) => (prev && evList.some((e: EventItem) => e.id === prev) ? prev : (activeEvent?.id || evList[0].id)));
       }
     } catch (err: unknown) {
       console.error(err);
-      setError("Unable to load events. Please check your connection or sign in.");
+      setError("Unable to load events from local storage.");
       setEvents([]);
     } finally {
       setLoadingEvents(false);
     }
-  }, []);
+  }, [user?.id, activeEvent?.id]);
 
   // Load tasks & schedule for selected event
   const loadTasksAndSchedule = useCallback(async (eventId: string) => {
@@ -112,24 +110,14 @@ function TimelineContent() {
       setLoadingTasks(true);
       setError(null);
 
-      const [tasksRes, scheduleRes] = await Promise.all([
-        fetch(`/api/events/${eventId}/tasks`),
-        fetch(`/api/events/${eventId}/tasks?view=schedule`),
+      const [tasksData, runSheet] = await Promise.all([
+        getLocalTasksWithDependencies(eventId),
+        getLocalRunSheet(eventId),
       ]);
 
-      if (tasksRes.ok) {
-        const tasksData = await tasksRes.json();
-        setTasks(tasksData.tasks || []);
-        setStatusCounts(tasksData.statusCounts || {});
-      } else {
-        const errJson = await tasksRes.json();
-        throw new Error(errJson.error || "Failed to load tasks");
-      }
-
-      if (scheduleRes.ok) {
-        const scheduleData = await scheduleRes.json();
-        setSchedule(scheduleData.schedule || []);
-      }
+      setTasks(tasksData.tasks);
+      setStatusCounts(tasksData.statusCounts);
+      setSchedule(runSheet as DayOfActivity[]);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to load timeline tasks.";
       setError(msg);
@@ -162,24 +150,27 @@ function TimelineContent() {
   }) => {
     if (!selectedEventId) return;
 
-    let res: Response;
     if (editingTask) {
-      res = await fetch(`/api/events/${selectedEventId}/tasks/${editingTask.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+      await updateLocalTask(editingTask.id, {
+        title: data.title,
+        description: data.description || undefined,
+        phase: data.phase,
+        priority: data.priority,
+        status: data.status,
+        dueDate: data.dueDate || null,
+        assignedTo: data.assignedTo || null,
+        prerequisiteIds: data.prerequisiteTaskIds || [],
       });
     } else {
-      res = await fetch(`/api/events/${selectedEventId}/tasks`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+      await createLocalTask({
+        eventId: selectedEventId,
+        title: data.title,
+        description: data.description || undefined,
+        phase: data.phase,
+        priority: data.priority,
+        dueDate: data.dueDate || null,
+        prerequisiteIds: data.prerequisiteTaskIds || [],
       });
-    }
-
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || "Failed to save task.");
     }
 
     await loadTasksAndSchedule(selectedEventId);
@@ -190,19 +181,13 @@ function TimelineContent() {
   const handleStatusChange = async (taskId: string, targetStatus: CanonicalTaskStatus) => {
     if (!selectedEventId) return;
 
-    const res = await fetch(`/api/events/${selectedEventId}/tasks/${taskId}?action=status`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: targetStatus }),
-    });
-
-    if (!res.ok) {
-      const err = await res.json();
-      alert(err.error || "Failed to update task status.");
-      return;
+    try {
+      await updateLocalTaskStatus(taskId, targetStatus);
+      await loadTasksAndSchedule(selectedEventId);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to update task status.";
+      alert(msg);
     }
-
-    await loadTasksAndSchedule(selectedEventId);
   };
 
   // Delete task
@@ -210,35 +195,26 @@ function TimelineContent() {
     if (!selectedEventId) return;
     if (!confirm(`Are you sure you want to delete task "${taskTitle}"?`)) return;
 
-    const res = await fetch(`/api/events/${selectedEventId}/tasks/${taskId}`, {
-      method: "DELETE",
-    });
-
-    if (!res.ok) {
-      const err = await res.json();
-      alert(err.error || "Failed to delete task.");
-      return;
+    try {
+      await deleteLocalTask(taskId);
+      await loadTasksAndSchedule(selectedEventId);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to delete task.";
+      alert(msg);
     }
-
-    await loadTasksAndSchedule(selectedEventId);
   };
 
   // Save schedule
   const handleSaveSchedule = async (newSchedule: DayOfActivity[]) => {
     if (!selectedEventId) return;
 
-    const res = await fetch(`/api/events/${selectedEventId}/tasks?action=schedule`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ schedule: newSchedule }),
-    });
-
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || "Failed to save run-sheet.");
+    try {
+      await saveLocalRunSheet(selectedEventId, newSchedule);
+      setSchedule(newSchedule);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to save run-sheet.";
+      throw new Error(msg);
     }
-
-    setSchedule(newSchedule);
   };
 
   if (loadingEvents) {
@@ -249,7 +225,7 @@ function TimelineContent() {
     );
   }
 
-  if (isUnauthenticated) {
+  if (!user) {
     return (
       <div className="space-y-6">
         <PageHeader
@@ -258,9 +234,9 @@ function TimelineContent() {
         />
         <EmptyState
           icon={ListTodo}
-          title="Sign in required"
-          description="Please sign in or create an account to view and manage your event timeline and milestones."
-          actionLabel="Sign In"
+          title="Local profile required"
+          description="Please select or create a local browser profile to view and manage your event timeline and milestones."
+          actionLabel="Select Profile"
           actionHref="/login"
         />
       </div>

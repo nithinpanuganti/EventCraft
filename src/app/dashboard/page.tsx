@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import Link from "next/link";
 import {
   CalendarDays,
@@ -22,39 +22,12 @@ import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { formatDate, formatCurrency } from "@/lib/utils";
-
-interface EventSummary {
-  id: string;
-  title: string;
-  type: "WEDDING" | "BIRTHDAY" | "COMMUNITY";
-  eventDate?: string | null;
-  location?: string | null;
-  guestCount: number;
-  totalBudget: number;
-  currency: string;
-  status: string;
-  updatedAt: string;
-}
+import { useAuth } from "@/components/layout/AuthContext";
 
 export default function DashboardPage() {
-  const [events, setEvents] = useState<EventSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isUnauthenticated, setIsUnauthenticated] = useState(false);
-
-  useEffect(() => {
-    fetch("/api/events")
-      .then(async (res) => {
-        if (res.status === 401) {
-          setIsUnauthenticated(true);
-          return [];
-        }
-        const data = await res.json();
-        return data.events || [];
-      })
-      .then((data) => setEvents(data))
-      .catch(() => setEvents([]))
-      .finally(() => setLoading(false));
-  }, []);
+  const { events, loadingEvents } = useAuth();
+  const loading = loadingEvents;
+  const isUnauthenticated = false;
 
   const totalEvents = events.length;
   const upcomingEvents = events.filter((e) => e.eventDate && new Date(e.eventDate) >= new Date()).length;

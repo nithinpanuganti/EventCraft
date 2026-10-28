@@ -2,26 +2,19 @@
   "name": "eventcraft-ai",
   "version": "0.1.0",
   "private": true,
-  "description": "GenAI-Powered Event Planning Assistant for Weddings, Birthdays, and Community Events",
+  "description": "Local-First Browser-Native Event Planning Assistant for Weddings, Birthdays, and Community Events",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
-    "test": "vitest run",
-    "prisma:generate": "prisma generate"
+    "test": "vitest run"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
-    "@prisma/client": "^6.4.1",
-    "bcryptjs": "^3.0.2",
     "clsx": "^2.1.1",
-    "jose": "^6.0.8",
     "lucide-react": "^1.16.0",
     "next": "^15.2.1",
-    "openai": "^7.44.0",
-    "prisma": "^6.4.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tailwind-merge": "^3.7.0",
@@ -29,7 +22,6 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.7",
-    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.13.9",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { GeneratedEventPlan } from "@/lib/planning/schema";
+import { GeneratedEventPlan } from "@/lib/local-planning/schema";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";

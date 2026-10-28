@@ -13,8 +13,7 @@ import { VendorModal } from "@/components/vendors/VendorModal";
 import { QuoteModal } from "@/components/vendors/QuoteModal";
 import { QuoteComparisonTable } from "@/components/vendors/QuoteComparisonTable";
 import { formatMoney } from "@/lib/budget/financial-engine";
-import { type VendorWithQuotes } from "@/lib/vendors/vendor-service";
-import { VendorStatus } from "@/lib/storage/types";
+import { type VendorWithQuotes, VendorStatus } from "@/lib/storage/types";
 import {
   getLocalEvents,
   getLocalVendorsAndCategories,

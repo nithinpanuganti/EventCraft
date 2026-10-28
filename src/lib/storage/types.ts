@@ -201,3 +201,58 @@ export interface LocalDatabaseBackup {
   vendorQuotes: LocalVendorQuote[];
   planRevisions: LocalPlanRevision[];
 }
+
+export interface TaskWithDependencies {
+  id: string;
+  eventId: string;
+  title: string;
+  description: string | null;
+  phase: TaskPhase;
+  priority: TaskPriority;
+  status: TaskStatus;
+  dueDate: Date | string | null;
+  completedAt: Date | string | null;
+  order: number;
+  assignedTo?: string | null;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+  prerequisites: {
+    id: string;
+    title: string;
+    status: TaskStatus;
+  }[];
+  dependents?: {
+    id: string;
+    title: string;
+    status: TaskStatus;
+  }[];
+  isBlockedByPrerequisites?: boolean;
+  blockingReason?: string | null;
+}
+
+export interface VendorWithQuotes {
+  id: string;
+  eventId: string;
+  categoryName: string;
+  companyName: string;
+  contactPerson: string | null;
+  email: string | null;
+  phone: string | null;
+  websiteUrl: string | null;
+  status: VendorStatus;
+  notes: string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  quotes: {
+    id: string;
+    vendorId: string;
+    description: string | null;
+    quotedAmount: number;
+    currency: string;
+    validUntil: Date | string | null;
+    isSelected: boolean;
+    quoteDocumentUrl: string | null;
+    createdAt: Date | string;
+  }[];
+}
+

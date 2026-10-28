@@ -5,7 +5,7 @@ import { formatMoney } from "@/lib/budget/financial-engine";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Check, ExternalLink, Calendar, CheckCircle2 } from "lucide-react";
-import { type VendorWithQuotes } from "@/lib/vendors/vendor-service";
+import { type VendorWithQuotes } from "@/lib/storage/types";
 
 interface QuoteComparisonTableProps {
   vendors: VendorWithQuotes[];

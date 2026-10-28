@@ -33,7 +33,7 @@ describe("Deterministic Local Planning Rule Engine", () => {
     expect(plan.budget.categories).toEqual(plan2.budget.categories);
   });
 
-  it("generates corporate and birthday plans with tailored categories", () => {
+  it("generates birthday plans with tailored categories and balanced budget", () => {
     const birthdayPlan = generateLocalPlan({
       title: "Emma's 30th Birthday",
       type: "BIRTHDAY",
@@ -48,5 +48,58 @@ describe("Deterministic Local Planning Rule Engine", () => {
 
     const totalAllocated = birthdayPlan.budget.categories.reduce((sum, c) => sum + c.allocatedAmount, 0);
     expect(totalAllocated).toBeCloseTo(3500, 2);
+    expect(birthdayPlan.dayOfSchedule.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it("generates community event plans with logistics, permits, and volunteers", () => {
+    const communityPlan = generateLocalPlan({
+      title: "Greenfield Annual Charity Fair",
+      type: "COMMUNITY",
+      guestCount: 500,
+      totalBudget: 12000,
+      currency: "USD",
+    });
+
+    expect(communityPlan.summary.conceptTitle).toContain("Community");
+    const categoryNames = communityPlan.budget.categories.map((c) => c.categoryName);
+    expect(categoryNames).toContain("Public Space, Permits & Security");
+    expect(categoryNames).toContain("AV Equipment, Stage & PA System");
+
+    const totalAllocated = communityPlan.budget.categories.reduce((sum, c) => sum + c.allocatedAmount, 0);
+    expect(totalAllocated).toBeCloseTo(12000, 2);
+
+    const taskPhases = new Set(communityPlan.tasks.map((t) => t.phase));
+    expect(taskPhases.has("PLANNING")).toBe(true);
+    expect(taskPhases.has("EVENT_DAY")).toBe(true);
+  });
+
+  it("guarantees exact cent conservation on awkward budget amounts without float drift", () => {
+    const oddBudget = 3333.33;
+    const plan = generateLocalPlan({
+      title: "Precision Test",
+      type: "WEDDING",
+      guestCount: 50,
+      totalBudget: oddBudget,
+      currency: "USD",
+    });
+
+    const totalAllocated = plan.budget.categories.reduce((sum, c) => sum + c.allocatedAmount, 0);
+    expect(Math.round(totalAllocated * 100)).toBe(Math.round(oddBudget * 100));
+  });
+
+  it("handles zero budget without division by zero or NaN values", () => {
+    const zeroPlan = generateLocalPlan({
+      title: "Zero Budget Meetup",
+      type: "COMMUNITY",
+      guestCount: 20,
+      totalBudget: 0,
+      currency: "USD",
+    });
+
+    expect(zeroPlan.budget.categories.length).toBeGreaterThan(0);
+    for (const cat of zeroPlan.budget.categories) {
+      expect(cat.allocatedAmount).toBe(0);
+      expect(Number.isNaN(cat.allocatedAmount)).toBe(false);
+    }
   });
 });

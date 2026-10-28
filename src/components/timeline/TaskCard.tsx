@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { type TaskWithDependencies } from "@/lib/timeline/timeline-service";
+import { type TaskWithDependencies } from "@/lib/storage/types";
 import { CanonicalTaskStatus } from "@/lib/timeline/task-state-machine";
 import {
   CheckCircle2,

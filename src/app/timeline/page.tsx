@@ -12,7 +12,7 @@ import { Tabs } from "@/components/ui/Tabs";
 import { TaskModal } from "@/components/timeline/TaskModal";
 import { TaskCard } from "@/components/timeline/TaskCard";
 import { RunSheetViewer, type DayOfActivity } from "@/components/timeline/RunSheetViewer";
-import { type TaskWithDependencies } from "@/lib/timeline/timeline-service";
+import { type TaskWithDependencies } from "@/lib/storage/types";
 import { CanonicalTaskStatus } from "@/lib/timeline/task-state-machine";
 import { TaskPhase, TaskPriority, TaskStatus } from "@/lib/storage/types";
 import {

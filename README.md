@@ -1,10 +1,10 @@
 # EventCraft AI
 
-> Intelligent, local-first event planning assistant for weddings, birthdays, and community gatherings.
+> Local-first, browser-native event planning assistant for weddings, birthdays, and community gatherings.
 
-EventCraft AI is a modern web application designed to simplify end-to-end event planning. It combines archetype-driven planning templates, deterministic integer-cents budgeting, a phased task state machine with dependency resolution, vendor quote comparisons, and a conversational natural-language command interpreter.
+EventCraft AI is a client-contained web application that delivers a complete event planning workspace directly inside your web browser. It combines archetype-driven planning templates, deterministic integer-cents budgeting, a phased task state machine with dependency resolution, multi-quote vendor tracking, and a conversational natural-language command interpreter.
 
-The application features a **local-first architecture** powered by browser-native IndexedDB for complete privacy and instant responsiveness with zero required backend dependencies, while also maintaining an optional Next.js API and PostgreSQL persistence layer for multi-tier environments.
+The application operates on a **100% browser-local architecture** powered by native IndexedDB. All event data, calculations, rules, and revisions execute entirely on the client with **zero application backend, zero database daemons, and zero external cloud AI dependencies**.
 
 ---
 
@@ -12,8 +12,9 @@ The application features a **local-first architecture** powered by browser-nativ
 [![Next.js](https://img.shields.io/badge/Next.js-15.2.1-000000?style=flat-square&logo=nextdotjs&logoColor=white)](next.config.js)
 [![React](https://img.shields.io/badge/React-19.0.0-61DAFB?style=flat-square&logo=react&logoColor=black)](package.json)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4.17-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)](tailwind.config.js)
-[![Vitest](https://img.shields.io/badge/Tests-122%20passed%20(18%20suites)-success?style=flat-square&logo=vitest&logoColor=white)](vitest.config.mts)
+[![Vitest](https://img.shields.io/badge/Tests-76%20passed%20(9%20suites)-success?style=flat-square&logo=vitest&logoColor=white)](vitest.config.mts)
 [![Persistence](https://img.shields.io/badge/Persistence-IndexedDB%20v1%20(9%20Stores)-8A2BE2?style=flat-square)](src/lib/storage/indexed-db.ts)
+[![Architecture](https://img.shields.io/badge/Architecture-100%25%20Browser--Local%20%2F%20Zero--API-10B981?style=flat-square)](src/lib/storage/local-repository.ts)
 [![License](https://img.shields.io/badge/License-Private-lightgrey?style=flat-square)](package.json)
 
 ---
@@ -40,14 +41,15 @@ The application features a **local-first architecture** powered by browser-nativ
 ## Overview
 
 ### The Problem
-Traditional event planning often relies on fragmented tools: disconnected spreadsheets, arbitrary budget estimates prone to rounding errors, static checklists lacking dependency tracking, and unstructured vendor notes. Furthermore, many modern cloud planning platforms enforce mandatory subscriptions, account lock-in, and constant data sharing with third-party servers.
+Traditional event planning often relies on fragmented tools: disconnected spreadsheets, arbitrary budget estimates prone to rounding errors, static checklists lacking dependency tracking, and unstructured vendor notes. Furthermore, modern cloud event planning platforms enforce mandatory subscriptions, account lock-in, and constant data sharing with third-party servers.
 
 ### The Solution
 EventCraft AI unifies the entire planning lifecycle into a single cohesive, highly responsive interface:
 - **Target Users**: Couples organizing weddings, families hosting milestone birthdays, non-profit organizers planning community fundraisers, and independent event coordinators.
-- **Local-First Reliability**: Operates directly in the browser using IndexedDB. No mandatory cloud accounts, no external database dependencies to install, and zero network latency.
+- **100% Browser-Local Reliability**: Operates entirely in the browser using native IndexedDB. No mandatory cloud accounts, no external database dependencies to install, and zero network latency.
 - **Financial Precision**: All financial calculations are tracked in exact integer cents, completely eliminating floating-point rounding errors and category reconciliation gaps.
 - **Structured Execution**: Tasks follow a formal state machine organized into chronological phases, complete with directed graph dependency validation to prevent scheduling conflicts.
+- **Deterministic Intelligence**: Generates structured blueprints, budgets, and itineraries using domain rule engines and pattern-matched command interpretation without cloud LLM inference or subscription APIs.
 
 ---
 
@@ -57,7 +59,7 @@ EventCraft AI unifies the entire planning lifecycle into a single cohesive, high
 - Guided 5-step event creation flow supporting three distinct event archetypes:
   - **Wedding**: Comprehensive vendor requirements, multi-phase ceremony and reception timelines, decor themes, and high-detail guest coordination.
   - **Birthday**: Milestone celebration themes, entertainment schedules, activity coordination, and catering tracking.
-  - **Community Event**: Public gathering logistics, permits, safety protocols, volunteer management, and accessible budget breakdowns.
+  - **Community Event**: Public gathering logistics, municipal permits, safety protocols, volunteer management, and accessible budget breakdowns.
 - Collects guest headcounts, target budgets, currency preferences, dates, and stylistic themes.
 
 ### 2. Exact-Cent Budget Allocation and Financial Ledger
@@ -77,15 +79,17 @@ EventCraft AI unifies the entire planning lifecycle into a single cohesive, high
 ### 5. Conversational Command Interpreter
 - Client-side natural language command parser allowing users to update their plan via quick text commands without clicking through multiple menus:
   - `add task [title]` &rarr; Adds a new task to the appropriate phase.
-  - `complete task [title / id]` &rarr; Checks prerequisites and marks the task as complete.
+  - `complete task [title]` &rarr; Checks prerequisites and marks the task as complete.
   - `change date to [YYYY-MM-DD]` &rarr; Updates the event target date and recalculates dependent milestones.
   - `adjust budget to [amount]` &rarr; Reallocates category limits and updates ledger variances.
-  - `add expense [amount] for [title]` &rarr; Creates an expense item against the matching budget category.
+  - `add expense [title] [amount]` &rarr; Creates an expense item against the matching budget category.
   - `show remaining budget` &rarr; Returns an instant breakdown of allocated vs. spent funds.
+  - `regenerate plan` &rarr; Re-runs the deterministic blueprint generator with confirmation guards.
+  - `update theme [theme description]` &rarr; Updates event styling and decor direction.
 
 ### 6. Local Profile Management and Data Portability
 - **Profiles**: Local user profiles with salt-hashed passcodes for convenient multi-user workspace separation on shared devices.
-- **JSON Backup Export**: Download the entire application state (all 9 IndexedDB stores) into a timestamped `.json` file.
+- **JSON Backup Export**: Download the entire application state (all 9 IndexedDB stores) into a timestamped `.json` file (`eventcraft-backup-YYYY-MM-DD.json`).
 - **Schema-Validated Restore**: Import backups with runtime structural validation using Zod schemas.
 - **Database Reset**: Safe one-click purge to clear local storage and start fresh.
 
@@ -116,72 +120,54 @@ The application features a translucent "Liquid Glass" design system built with c
 
 ## System Architecture
 
-EventCraft AI is designed around a dual-mode persistence architecture. By default, it operates as a self-contained client-side application running entirely in the user's browser, while maintaining complete schema compatibility with an optional server-side PostgreSQL backend.
+EventCraft AI operates on a **100% client-side, browser-native architecture**. All business logic, persistence, and state transitions execute directly within the user's browser runtime.
 
 ```mermaid
 flowchart TD
-    subgraph Client ["Client Browser Runtime (React 19 / Next.js)"]
+    subgraph Browser ["Client Browser Runtime (React 19 / Next.js)"]
         UI["Liquid Glass UI Primitives<br/>(AppShell, Modals, Sliders, Cards)"]
-        AuthCtx["AuthContext & Profile Manager"]
+        AuthCtx["AuthContext & Profile Manager<br/>(LocalStorage Active Profile Tracking)"]
         
-        subgraph LocalEngine ["Local Planning & Logic Engine"]
-            RuleEngine["Deterministic Rule Engine<br/>(Archetype Blueprints)"]
-            CmdParser["Natural Language Command Parser"]
+        subgraph LocalEngine ["Local Planning & Calculation Engine"]
+            RuleEngine["Deterministic Rule Engine<br/>(Weddings, Birthdays, Community)"]
+            CmdParser["Deterministic Command Interpreter<br/>(Pattern Matching & Revision Actions)"]
             BudgetMath["Exact-Cent Budget Engine<br/>(Integer Cents Arithmetic)"]
             TaskGraph["Task State Machine<br/>(DFS Cycle Detection)"]
         end
 
-        subgraph LocalStorage ["Browser Native Storage Layer"]
+        subgraph LocalStorage ["Browser Native Persistence Layer"]
             IDB[("IndexedDB: eventcraft_local_db<br/>• profiles • events • event_plans<br/>• budget_categories • expenses<br/>• tasks • vendors • vendor_quotes<br/>• plan_revisions")]
-            BackupUtil["JSON Backup Export / Restore<br/>(Zod Schema Validation)"]
+            BackupUtil["JSON Backup Export / Restore<br/>(Zod Schema Runtime Validation)"]
         end
-    end
-
-    subgraph Server ["Optional Server Layer (Next.js App Router API)"]
-        API["Route Handlers (/api/*)<br/>• /api/auth • /api/events"]
-        PrismaORM["Prisma Client ORM"]
-        Postgres[("PostgreSQL 16 Database<br/>(Relational Schema)")]
-        AIAdapters["External AI Adapters<br/>(Gemini / OpenAI with Fallback)"]
     end
 
     UI --> AuthCtx
     UI --> LocalEngine
     LocalEngine --> IDB
     IDB <--> BackupUtil
-    
-    %% Optional Hybrid Path
-    UI -.->|"Optional Server Mode"| API
-    API --> PrismaORM
-    PrismaORM --> Postgres
-    API -.-> AIAdapters
 ```
 
 ### Architectural Principles
-1. **Zero-Latency Client Operation**: All core features (wizard, budgeting, tasks, runsheet, vendor tracking, and command execution) run synchronously against local IndexedDB with zero network round trips.
-2. **Deterministic Fallbacks**: In the absence of an external AI API key or network connection, the local rule engine provides complete, realistic event plans, budgets, and schedules.
-3. **Data Isolation**: Profiles and event databases remain on the local device unless the user explicitly exports a JSON backup or configures a backend database.
+1. **Zero Runtime Network Dependencies**: The application triggers zero HTTP requests (`fetch()`, `axios`, or `XMLHttpRequest`) to external servers or cloud services during normal operation.
+2. **Zero Database Configuration**: No PostgreSQL, MySQL, Docker containers, or database daemons are required. All records persist natively in browser IndexedDB.
+3. **Deterministic Math and Rules**: Budget balancing, task dependencies, and plan generation use deterministic algorithms that produce identical, verified results without floating-point errors.
+4. **Data Ownership and Privacy**: Event details, guest counts, vendor quotes, and budget figures never leave the user's machine.
 
 ---
 
 ## Technology Stack
 
 ### Frontend and Client Runtime
-- **Framework**: [Next.js 15.2.1](https://nextjs.org/) (App Router architecture with static page generation)
+- **Framework**: [Next.js 15.2.1](https://nextjs.org/) (Static page generation, client-rendered App Router)
 - **UI Library**: [React 19.0.0](https://react.dev/) (Hooks, Context API, Client Components)
 - **Styling**: [Tailwind CSS 3.4.17](https://tailwindcss.com/) with custom Liquid Glass design tokens and [PostCSS 8.4.38](https://postcss.org/)
 - **Icons**: [Lucide React 1.16.0](https://lucide.dev/)
 - **Class Utilities**: `clsx` and `tailwind-merge`
 
-### Logic, Validation, and Storage
-- **Local Persistence**: Native Browser [IndexedDB API](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API) (Database: `eventcraft_local_db`, 9 dedicated object stores) with an in-memory fallback for SSR and testing
-- **Schema Validation**: [Zod 3.24.2](https://zod.dev/) for form validation, route contract checking, and backup file integrity
+### Local Persistence and Planning
+- **Persistence**: Native Browser [IndexedDB API](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API) (Database: `eventcraft_local_db`, 9 dedicated object stores) with an in-memory fallback for SSR and testing
+- **Schema Validation**: [Zod 3.24.2](https://zod.dev/) for form validation, blueprint constraints, and backup file integrity
 - **Planning Engines**: Custom deterministic rule engine and natural-language command interpreter
-
-### Optional Backend and Database Layer
-- **ORM**: [Prisma ORM 6.4.1](https://www.prisma.io/) with versioned PostgreSQL migrations
-- **Database**: PostgreSQL 16 (local installation or containerized via Docker Compose)
-- **Authentication**: [Jose 6.0.8](https://github.com/panva/jose) (JWT sessions) and [Bcryptjs 3.0.2](https://github.com/dcodeIO/bcrypt.js)
-- **External AI Providers**: `@google/generative-ai` 0.24.1 (Google Gemini) and `openai` 7.44.0 (OpenAI GPT-4o) with automatic domain template fallbacks
 
 ### Quality and Testing
 - **Test Framework**: [Vitest 5.0.5](https://vitest.dev/) with native ESM configuration
@@ -196,15 +182,15 @@ flowchart TD
 EventCraft AI/
 ├── docs/                           # Architectural specifications and guides
 │   ├── ARCHITECTURE.md             # System architecture & domain boundaries
-│   ├── DATA_MODEL.md               # Relational database schema reference
-│   ├── DEPLOYMENT_GUIDE.md         # Server deployment runbook
+│   ├── DATA_MODEL.md               # Data model reference
+│   ├── DEPLOYMENT_GUIDE.md         # Deployment runbook
 │   ├── TESTING_GUIDE.md            # Test suite catalogue & execution guide
 │   └── USER_FLOWS.md               # User journeys & state transition diagrams
-├── prisma/                         # Relational database schema & migrations
-│   ├── schema.prisma               # Prisma data model definition
+├── prisma/                         # Historical schema reference (inactive at runtime)
+│   ├── schema.prisma               # Prisma data model reference
 │   └── migrations/                 # Version-controlled SQL migrations
 ├── src/
-│   ├── app/                        # Next.js App Router pages and API routes
+│   ├── app/                        # Next.js App Router client pages
 │   │   ├── layout.tsx              # Root HTML layout and context providers
 │   │   ├── page.tsx                # Landing and presentation page
 │   │   ├── globals.css             # Tailwind directives & glassmorphic tokens
@@ -215,8 +201,7 @@ EventCraft AI/
 │   │   ├── timeline/               # Phased milestones & day-of runsheet
 │   │   ├── vendors/                # Vendor directory & quotation comparisons
 │   │   ├── settings/               # Profile management & JSON backup export/import
-│   │   ├── login/ & register/      # Profile authentication screens
-│   │   └── api/                    # Optional server API endpoints (auth, events)
+│   │   └── login/ & register/      # Local profile selection screens
 │   ├── components/                 # React component library
 │   │   ├── ui/                     # 14 reusable glass UI primitives (Button, Modal, etc.)
 │   │   ├── layout/                 # AppShell, Header, Sidebar, AuthContext
@@ -227,16 +212,14 @@ EventCraft AI/
 │   │   └── vendors/                # Vendor cards, quote tables, dialogs
 │   ├── lib/                        # Core business logic and storage services
 │   │   ├── storage/                # IndexedDB engine, local repository, types, tests
-│   │   ├── local-planning/         # Rule engine & command interpreter
+│   │   ├── local-planning/         # Rule engine, command interpreter, schema, tests
 │   │   ├── budget/                 # Exact-cent financial arithmetic & tests
 │   │   ├── timeline/               # Task state machine & DFS cycle detection
-│   │   ├── vendors/                # Vendor quote comparison logic
-│   │   ├── planning/               # Server AI provider adapters with fallbacks
-│   │   ├── data-access/            # Prisma queries for optional server mode
+│   │   ├── vendors/                # Vendor schemas and quote comparison logic
 │   │   ├── validations/            # Zod validation schemas & tests
-│   │   └── auth.ts                 # JWT signing and verification utilities
+│   │   ├── navigation.ts           # Navigation items and route definitions
+│   │   └── utils.ts                # Class merger and currency formatting utilities
 │   └── types/                      # Shared TypeScript interface definitions
-├── docker-compose.yml              # Local PostgreSQL 16 development container
 ├── start.bat                       # Automated Windows launcher script
 ├── vitest.config.mts               # Vitest test runner configuration
 ├── next.config.js                  # Next.js configuration & HTTP security headers
@@ -253,7 +236,8 @@ EventCraft AI/
 - **Node.js**: `v20.x` or `v22.x` or higher (verified on Node `v22+` and `v26+`).
 - **Package Manager**: `npm` (`v10+`).
 - **Operating System**: Windows, macOS, or Linux.
-- **Database (Optional)**: No database is required to run EventCraft AI in local-first mode. If you wish to enable the optional PostgreSQL backend, Docker or a local PostgreSQL instance is supported.
+- **Database**: **None required**. EventCraft AI does not require PostgreSQL, Docker, or any database daemon.
+- **API Keys**: **None required**. EventCraft AI does not require OpenAI, Gemini, or external API keys.
 
 ---
 
@@ -280,8 +264,6 @@ npm install
 
 ### Step 3: Configure Environment Variables
 
-Copy the example environment configuration:
-
 ```bash
 # On Windows Command Prompt:
 copy .env.example .env
@@ -290,38 +272,20 @@ copy .env.example .env
 cp .env.example .env
 ```
 
-> [!NOTE]
-> EventCraft AI runs out of the box with the default `.env.example` settings. You do not need to provide external API keys or change database credentials to use the local planning features.
+The application runs immediately out of the box with default settings.
 
 ---
 
-### Step 4: Optional PostgreSQL Database (Server Mode)
+### Step 4: Start the Development Server
 
-If you wish to test the optional PostgreSQL backend:
-
-```bash
-# Start a local PostgreSQL 16 container via Docker Compose
-docker compose up -d
-
-# Generate the Prisma client and apply migrations
-npm run prisma:generate
-npx prisma migrate dev
-```
-
-If you do not run Docker or PostgreSQL, EventCraft AI automatically activates its browser-native IndexedDB engine and operates without errors.
-
----
-
-### Step 5: Start the Development Server
-
-#### Option A: Automated One-Click Launcher (Windows)
+#### Option A: One-Click Launcher (Windows)
 Double-click `start.bat` in the root folder, or execute it in your terminal:
 
 ```cmd
 start.bat
 ```
 
-The launcher automatically checks for Node.js, installs dependencies if missing, generates the Prisma client if needed, checks database availability, and opens the server.
+The launcher verifies Node.js, installs dependencies if missing, ensures `.env` exists, and starts the development server.
 
 #### Option B: Standard npm Command (All Platforms)
 
@@ -343,21 +307,16 @@ Once the dev server compiles, open your browser and navigate to:
 
 ## Environment Variables
 
-All configuration settings are managed via environment variables. Refer to [`.env.example`](.env.example) for a complete template:
+All configuration settings are managed via environment variables. Refer to [`.env.example`](.env.example) for reference:
 
 | Variable | Description | Required? | Default / Example Value |
 | :--- | :--- | :---: | :--- |
-| `DATABASE_URL` | PostgreSQL connection string for Prisma. | Optional | `postgresql://postgres:password@localhost:5432/eventcraft_dev?schema=public` |
-| `AUTH_SECRET` | Secret key used to sign and verify JWT session cookies. | Optional | `eventcraft-ai-super-secret-key-32-chars-minimum-token-protection` |
-| `NEXTAUTH_URL` | Canonical URL of the application. | Optional | `http://localhost:3000` |
-| `APP_URL` | Base application URL for CORS and internal redirects. | Optional | `http://localhost:3000` |
-| `APP_ENV` | Application environment mode (`development`, `production`). | Optional | `development` |
-| `AI_PROVIDER` | External AI provider adapter (`gemini`, `openai`). | Optional | `gemini` (falls back to local rules if keys are empty) |
-| `AI_TIMEOUT_MS`| Timeout limit in milliseconds for external AI network calls. | Optional | `15000` |
-| `GEMINI_API_KEY`| API key for Google Gemini generative AI services. | Optional | `""` (empty enables curated template fallback) |
-| `GEMINI_MODEL` | Target Google Gemini model identifier. | Optional | `gemini-1.5-pro` |
-| `OPENAI_API_KEY`| API key for OpenAI GPT models. | Optional | `""` (empty enables curated template fallback) |
-| `OPENAI_MODEL` | Target OpenAI model identifier. | Optional | `gpt-4o` |
+| `NEXT_PUBLIC_APP_NAME` | Display name of the application. | Optional | `EventCraft AI` |
+| `NEXT_PUBLIC_APP_ENV` | Application environment mode (`development`, `production`). | Optional | `development` |
+| `NEXT_PUBLIC_APP_URL` | Canonical URL of the application. | Optional | `http://localhost:3000` |
+
+> [!NOTE]
+> EventCraft AI requires zero backend connection strings, authentication secrets, or external API keys.
 
 ---
 
@@ -383,37 +342,25 @@ npm run build
 
 # Start the Next.js production server
 npm run start
-
-# Generate Prisma Client types from schema.prisma
-npm run prisma:generate
 ```
 
 ### Verified Test Suite Breakdown
-EventCraft AI includes a test suite covering unit math, dependency resolution algorithms, storage persistence, schema validation, and service orchestration.
+EventCraft AI includes a test suite covering unit math, dependency resolution algorithms, storage persistence, schema validation, command interpretation, and zero-network verification.
 
-**Current Test Results**: **122 passed** across **18 test files** (100% success rate):
+**Current Test Results**: **76 passed** across **9 test files** (100% success rate):
 
 | Category | Test Suite File | Count | Verified Behaviors |
 | :--- | :--- | :---: | :--- |
-| **Local Persistence** | `src/lib/storage/indexed-db.test.ts` | 4 | IndexedDB CRUD, memory fallback, JSON backup export, and schema-validated restore |
+| **Storage Architecture** | `src/lib/storage/browser-architecture.test.ts` | 5 | Zero network requests verification, profile switching/deletion, event cascade cleanup, corrupted backup rejection, navigation route integrity |
+| **IndexedDB Engine** | `src/lib/storage/indexed-db.test.ts` | 4 | IndexedDB CRUD, memory fallback, versioned backup export, and schema-validated restore |
 | **Local Repository** | `src/lib/storage/local-repository.test.ts` | 4 | Passcode hashing, event scoping, task dependencies, vendor quotes, and budget CRUD |
-| **Rule Engine** | `src/lib/local-planning/rule-engine.test.ts` | 2 | Wedding and Birthday deterministic planning, exact-cent balanced budget allocation |
-| **Command Parser** | `src/lib/local-planning/command-interpreter.test.ts` | 5 | Natural language commands (`add task`, `change date`, `adjust budget`), fallbacks |
+| **Rule Engine** | `src/lib/local-planning/rule-engine.test.ts` | 5 | Wedding, Birthday, and Community deterministic blueprints, exact-cent balanced budget allocation, zero-budget division safety |
+| **Command Interpreter**| `src/lib/local-planning/command-interpreter.test.ts` | 9 | Natural language commands (`add task`, `complete task`, `change date`, `adjust budget`, `add expense`, `regenerate plan`, `update theme`, `show remaining budget`), unsupported command guidance |
 | **Financial Engine** | `src/lib/budget/financial.test.ts` | 12 | Integer-cents arithmetic, category variance, zero-budget division safety, overruns |
 | **Timeline Engine** | `src/lib/timeline/task-state-machine.test.ts` | 16 | Transition state machine, cyclic dependency detection (DFS), prerequisite chains |
-| **Validation Schemas**| `src/lib/validations/wizard.test.ts` | 15 | 5-step event wizard schema boundaries, budget limits, future date constraints |
-| **Validation Schemas**| `src/lib/validations/validations.test.ts` | 6 | Input schemas and partial update guardrails |
-| **Auth Fallback** | `src/lib/auth-api.test.ts` | 11 | Graceful 503 handling when database is offline, safe offline response headers |
-| **Authentication** | `src/lib/auth.test.ts` | 3 | Password hashing and signed JWT verification |
-| **Budget Service** | `src/lib/budget/budget-service.test.ts` | 5 | Category allocation rules and expense creation |
-| **Timeline Service** | `src/lib/timeline/timeline-service.test.ts` | 5 | Task status transitions and schedule management |
-| **Vendor Service** | `src/lib/vendors/vendor-service.test.ts` | 6 | Vendor directory CRUD and quotation selection |
-| **Revision Service** | `src/lib/revisions/revision-service.test.ts` | 6 | Intent classification and differential proposals |
-| **Data Access** | `src/lib/data-access/events.test.ts` | 5 | Tenant-isolated query structures |
-| **Provider Adapters**| `src/lib/planning/providers.test.ts` | 5 | Provider adapter timeouts and error handling |
-| **Planning Service** | `src/lib/planning/planning.test.ts` | 11 | Planning orchestration and curated template fallbacks |
-| **Journey Test** | `src/lib/e2e-journey.test.ts` | 1 | Multi-service simulation journey test |
-| **Total** | **18 Suites** | **122** | **All 122 tests passing** |
+| **Wizard Validation** | `src/lib/validations/wizard.test.ts` | 15 | 5-step event wizard schema boundaries, budget limits, future date constraints |
+| **General Validation** | `src/lib/validations/validations.test.ts` | 6 | Input schemas and partial update guardrails |
+| **Total** | **9 Suites** | **76** | **All 76 tests passing (100% success rate)** |
 
 ---
 
@@ -422,7 +369,7 @@ EventCraft AI includes a test suite covering unit math, dependency resolution al
 EventCraft AI prioritizes user privacy and data ownership through clear storage boundaries:
 
 1. **Client-Contained Storage**:
-   When used in local-first mode, all event details, guest counts, budget numbers, vendor quotes, and profile records are stored directly inside your browser's IndexedDB engine (`eventcraft_local_db`). No data is transmitted to external telemetry servers or third-party cloud hosts.
+   All event details, guest counts, budget numbers, vendor quotes, and profile records are stored directly inside your browser's IndexedDB engine (`eventcraft_local_db`). No data is transmitted to external servers, cloud providers, or telemetry collectors.
 2. **Object Stores**:
    Data is partitioned across 9 distinct IndexedDB object stores:
    - `profiles`: User names, emails, and salt-hashed passcodes.
@@ -434,18 +381,19 @@ EventCraft AI prioritizes user privacy and data ownership through clear storage 
    - `vendors`: Vendor contact information, categories, and booking status.
    - `vendor_quotes`: Itemized quotes submitted by vendors.
    - `plan_revisions`: Audit history of modifications made via command revisions.
-3. **Storage Reset and Browser Clearing**:
+3. **Local Profiles as Workspaces**:
+   Profiles provide convenient workspace separation for different planners or events on a shared browser. Because profiles reside in browser storage, they are not intended as cryptographic security boundaries against users with access to browser developer tools.
+4. **Storage Reset and Browser Clearing**:
    Clearing site data or cache for `localhost` in your browser will erase local IndexedDB stores. To ensure your plans are preserved, use the **Export Backup (.json)** feature in `/settings` to save an atomic copy to your local drive.
-4. **External Services**:
-   Network requests to Google Gemini or OpenAI are made **only** if the corresponding API keys are explicitly configured in `.env`. If no keys are provided, planning is handled exclusively by the local deterministic rule engine.
 
 ---
 
 ## Current Status and Roadmap
 
 ### Implemented and Verified Capabilities
+- [x] 100% Browser-local architecture with zero runtime API or database dependencies.
 - [x] Multi-archetype event planning wizard (Weddings, Birthdays, Community Events).
-- [x] Complete client-contained persistence with 9 IndexedDB stores and SSR in-memory fallback.
+- [x] Complete client persistence with 9 IndexedDB stores and SSR in-memory fallback.
 - [x] Exact-cent integer budgeting engine with guaranteed zero-rounding-error balancing.
 - [x] Phased task state machine with DFS cyclic dependency prevention.
 - [x] Hour-by-hour day-of Run of Show schedule generator.
@@ -453,15 +401,14 @@ EventCraft AI prioritizes user privacy and data ownership through clear storage 
 - [x] Conversational command interpreter for natural-language plan adjustments.
 - [x] Atomic JSON database backup export and schema-validated restore.
 - [x] Translucent Liquid Glass design system built with responsive Tailwind CSS.
-- [x] Automated Windows launcher script (`start.bat`) with prerequisite verification.
-- [x] Automated test suite with 122 passing tests across 18 suites.
+- [x] Automated Windows launcher script (`start.bat`) with dependency verification.
+- [x] Automated test suite with 76 passing tests across 9 suites.
 
 ### Planned Enhancements
-- [ ] Bidirectional sync between local IndexedDB and cloud PostgreSQL instances.
-- [ ] Multi-user real-time collaboration with role-based editing permissions.
-- [ ] Guest list management with dietary preference tracking and RSVP status.
 - [ ] Export of Day-of Run of Show to iCal (`.ics`) and printable PDF formats.
 - [ ] Seating chart builder with drag-and-drop table arrangements.
+- [ ] Multi-event timeline overlap calendar view.
+- [ ] Customizable archetype template creator.
 
 ---
 
@@ -477,6 +424,7 @@ Contributions to EventCraft AI are welcome. To contribute:
 3. **Adhere to Code Standards**:
    - Write clear, typed TypeScript code.
    - Maintain the Liquid Glass design aesthetic and component hierarchy.
+   - Ensure all features operate entirely within the browser without introducing backend endpoints.
    - Add unit tests in `src/lib/` for any new logic or algorithms.
 4. **Run Verification Commands**:
    ```bash
@@ -498,10 +446,9 @@ This repository is currently marked as `"private": true` in [`package.json`](pac
 ## Acknowledgments
 
 EventCraft AI is built with modern open-source software and tools:
-- [Next.js](https://nextjs.org/) by Vercel for the App Router architecture.
+- [Next.js](https://nextjs.org/) by Vercel for the client-side App Router architecture.
 - [React](https://react.dev/) by Meta.
 - [Tailwind CSS](https://tailwindcss.com/) by Tailwind Labs.
 - [Lucide Icons](https://lucide.dev/) for UI iconography.
 - [Vitest](https://vitest.dev/) for unit and integration testing.
-- [Prisma ORM](https://www.prisma.io/) for type-safe database schemas.
 - [Zod](https://zod.dev/) for TypeScript-first schema declaration and validation.

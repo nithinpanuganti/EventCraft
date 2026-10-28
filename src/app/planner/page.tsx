@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { PlanViewer } from "@/components/events/PlanViewer";
 import { ConversationalRevisionPanel } from "@/components/planner/ConversationalRevisionPanel";
-import { GeneratedEventPlan } from "@/lib/planning/schema";
+import { GeneratedEventPlan } from "@/lib/local-planning/schema";
 import { Sparkles, Calendar, PlusCircle, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/components/layout/AuthContext";

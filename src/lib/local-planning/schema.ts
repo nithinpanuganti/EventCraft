@@ -1,9 +1,9 @@
 import { z } from "zod";
 
-// Task priority enum matching Prisma
+// Task priority enum
 export const PlanTaskPrioritySchema = z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]);
 
-// Task phase enum matching Prisma
+// Task phase enum
 export const PlanTaskPhaseSchema = z.enum([
   "PLANNING",
   "BOOKING",
@@ -51,8 +51,8 @@ export const PlanBudgetProposalSchema = z.object({
 export const PlanMilestoneSchema = z.object({
   title: z.string().trim().min(3).max(150),
   phase: PlanTaskPhaseSchema,
-  offsetDays: z.number().int(), // negative for days before event, 0 for day-of, positive for post-event
-  targetDate: z.string().optional(), // ISO date string if eventDate known
+  offsetDays: z.number().int(),
+  targetDate: z.string().optional(),
   description: z.string().trim().max(500),
   priority: PlanTaskPrioritySchema.default("MEDIUM"),
 });
@@ -65,12 +65,12 @@ export const PlanTaskSchema = z.object({
   priority: PlanTaskPrioritySchema.default("MEDIUM"),
   category: z.string().trim().max(100).optional(),
   offsetDays: z.number().int().default(-30),
-  dueDate: z.string().optional(), // ISO date if computable
+  dueDate: z.string().optional(),
 });
 
 // F. Event-Day Schedule (Run-of-show)
 export const PlanDayOfScheduleItemSchema = z.object({
-  time: z.string().trim().min(1).max(30), // e.g. "09:00 AM", "T-2 Hours", "14:00"
+  time: z.string().trim().min(1).max(30),
   activity: z.string().trim().min(2).max(200),
   lead: z.string().trim().max(100).default("Lead Coordinator"),
   notes: z.string().trim().max(500).optional(),

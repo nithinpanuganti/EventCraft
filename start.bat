@@ -1,9 +1,9 @@
 @echo off
 setlocal enabledelayedexpansion
-title EventCraft AI - Launcher
+title EventCraft AI - Local Launcher
 
 echo ========================================================
-echo               EventCraft AI Application
+echo        EventCraft AI — Local-First Event Planner
 echo ========================================================
 echo.
 
@@ -30,36 +30,16 @@ if not exist "node_modules" (
     )
 )
 
-echo [1/3] Checking Prisma Client...
-if not exist "node_modules\.prisma\client\query_engine-windows.dll.node" (
-    echo [INFO] Generating Prisma Client for the first time...
-    call npm.cmd run prisma:generate
-) else (
-    echo [INFO] Prisma Client is already generated and ready.
-)
-
-echo.
-echo [2/3] Checking environment configuration and database connectivity...
+REM Ensure local environment file exists
 if not exist ".env" (
     if exist ".env.example" (
-        echo [INFO] .env not found. Copying .env.example to .env...
+        echo [INFO] Creating .env from .env.example...
         copy ".env.example" ".env" >nul
     )
 )
 
-REM Check if PostgreSQL port 5432 is reachable (instant TCP socket check)
-powershell -NoProfile -ExecutionPolicy Bypass -Command "try { (New-Object Net.Sockets.TcpClient).Connect('127.0.0.1', 5432); exit 0 } catch { exit 1 }" >nul 2>&1
-if !errorlevel! neq 0 (
-    echo [WARN] PostgreSQL is not currently reachable on localhost:5432.
-    echo        If using Docker: run 'docker compose up -d'
-    echo        If using Windows service: run 'Start-Service postgresql*'
-    echo        The app will run in offline mode [fallbacks active; registration requires DB].
-) else (
-    echo [INFO] PostgreSQL database server is reachable on localhost:5432.
-)
-
-echo.
-echo [3/3] Starting EventCraft AI Development Server...
+echo [INFO] Storage: Browser-native IndexedDB (eventcraft_local_db)
+echo [INFO] Mode:    100%% Local-First (Zero external APIs or database required)
 echo.
 echo ========================================================
 echo  Application will be accessible at:
@@ -72,4 +52,3 @@ echo.
 call npm.cmd run dev
 
 pause
-

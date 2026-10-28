@@ -21,6 +21,8 @@ import {
   TaskStatus,
   VendorStatus,
   PaymentStatus,
+  TaskWithDependencies,
+  VendorWithQuotes,
 } from "./types";
 import { generateLocalPlan } from "../local-planning/rule-engine";
 import {
@@ -28,11 +30,15 @@ import {
   checkDependencyBlocking,
   CanonicalTaskStatus,
 } from "../timeline/task-state-machine";
-import type { TaskWithDependencies } from "../timeline/timeline-service";
-import type { VendorWithQuotes } from "../vendors/vendor-service";
+
 
 const ACTIVE_PROFILE_KEY = "eventcraft_active_profile_id";
 const ACTIVE_EVENT_KEY = "eventcraft_active_event_id";
+let memoryActiveProfileId: string | null = null;
+
+export function resetMemorySession(): void {
+  memoryActiveProfileId = null;
+}
 
 // Unique ID generators
 export function generateId(prefix: string): string {
@@ -62,16 +68,17 @@ export async function getLocalProfiles(): Promise<LocalProfile[]> {
 
 export async function getActiveLocalProfile(): Promise<LocalProfile> {
   const profiles = await getLocalProfiles();
-  let activeId: string | null = null;
+  let activeId: string | null = memoryActiveProfileId;
 
   if (typeof window !== "undefined" && window.localStorage) {
-    activeId = window.localStorage.getItem(ACTIVE_PROFILE_KEY);
+    activeId = window.localStorage.getItem(ACTIVE_PROFILE_KEY) || memoryActiveProfileId;
   }
 
   const found = profiles.find((p) => p.id === activeId);
   if (found) return found;
 
   const defaultProfile = profiles[0];
+  memoryActiveProfileId = defaultProfile.id;
   if (typeof window !== "undefined" && window.localStorage) {
     window.localStorage.setItem(ACTIVE_PROFILE_KEY, defaultProfile.id);
   }
@@ -82,6 +89,7 @@ export async function setActiveLocalProfile(profileId: string): Promise<LocalPro
   const profile = await dbGet<LocalProfile>("profiles", profileId);
   if (!profile) throw new Error("Profile not found");
 
+  memoryActiveProfileId = profile.id;
   if (typeof window !== "undefined" && window.localStorage) {
     window.localStorage.setItem(ACTIVE_PROFILE_KEY, profile.id);
   }

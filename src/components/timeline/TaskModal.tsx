@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
-import { type TaskWithDependencies } from "@/lib/timeline/timeline-service";
+import { type TaskWithDependencies } from "@/lib/storage/types";
 import { TaskPhase, TaskPriority, TaskStatus } from "@/lib/storage/types";
 
 interface TaskModalProps {

@@ -89,21 +89,24 @@ export function ConversationalRevisionPanel({
   };
 
   return (
-    <div className="space-y-4 rounded-xl border border-surface-200/90 glass-surface p-4 shadow-glass">
-      <div className="flex items-center justify-between border-b border-surface-200/80 pb-3">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-primary-100/80 text-primary-700">
+    <div className="space-y-4 rounded-2xl glass-surface p-5 shadow-glass relative overflow-hidden">
+      {/* Specular top sheen */}
+      <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/95 to-transparent pointer-events-none" />
+
+      <div className="flex items-center justify-between border-b border-surface-200/70 pb-3.5">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 text-white shadow-[0_2px_8px_rgba(124,58,237,0.3)]">
             <Terminal className="h-4 w-4" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-surface-900">Deterministic Local Command Interpreter</h3>
+            <h3 className="text-sm font-bold text-surface-900">Deterministic Local Command Interpreter</h3>
             <p className="text-xs text-surface-500">
               Type natural planning commands. Interpreted and applied directly inside your browser.
             </p>
           </div>
         </div>
-        <Badge variant="secondary">
-          100% Offline Rule Engine
+        <Badge variant="primary" size="sm">
+          Offline Rule Engine
         </Badge>
       </div>
 
@@ -114,7 +117,7 @@ export function ConversationalRevisionPanel({
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           disabled={isProposing || isApplying}
-          className="flex-1 text-sm bg-white/70"
+          className="flex-1 text-sm shadow-glass-subtle"
         />
         <Button
           type="submit"
@@ -122,7 +125,7 @@ export function ConversationalRevisionPanel({
           size="md"
           isLoading={isProposing}
           disabled={!prompt.trim() || isApplying}
-          className="gap-1.5 shrink-0"
+          className="gap-1.5 shrink-0 shadow-glass font-semibold"
         >
           <Send className="h-3.5 w-3.5" />
           <span>Execute</span>
@@ -131,24 +134,24 @@ export function ConversationalRevisionPanel({
 
       {/* Notifications */}
       {error && (
-        <div className="flex items-center gap-2 rounded-lg bg-danger-50/80 p-3 text-xs text-danger-700 border border-danger-200/80 animate-page-enter">
-          <AlertCircle className="h-4 w-4 shrink-0" />
+        <div className="flex items-center gap-2 rounded-xl bg-danger-50/90 p-3.5 text-xs text-danger-700 border border-danger-200/80 backdrop-blur-sm animate-page-enter">
+          <AlertCircle className="h-4 w-4 shrink-0 text-danger-600" />
           <span>{error}</span>
         </div>
       )}
 
       {successMessage && (
-        <div className="flex items-center gap-2 rounded-lg bg-success-50/80 p-3 text-xs text-success-700 border border-success-200/80 animate-page-enter">
-          <CheckCircle2 className="h-4 w-4 shrink-0" />
+        <div className="flex items-center gap-2 rounded-xl bg-success-50/90 p-3.5 text-xs text-success-700 border border-success-200/80 backdrop-blur-sm animate-page-enter">
+          <CheckCircle2 className="h-4 w-4 shrink-0 text-success-600" />
           <span>{successMessage}</span>
         </div>
       )}
 
       {/* Proposed Changes Preview Card */}
       {proposal && (
-        <div className="space-y-3 rounded-lg border border-primary-200/80 bg-white/80 p-4 shadow-glass animate-page-enter">
-          <div className="flex items-center justify-between border-b border-surface-100 pb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-surface-500">
+        <div className="space-y-3.5 rounded-2xl glass-surface-elevated p-5 shadow-glass-elevated border border-primary-200/80 animate-page-enter">
+          <div className="flex items-center justify-between border-b border-surface-200/60 pb-2.5">
+            <span className="text-xs font-bold uppercase tracking-wider text-surface-500">
               Proposed Operation
             </span>
             <div className="flex items-center gap-2">
@@ -164,8 +167,8 @@ export function ConversationalRevisionPanel({
                 {proposal.classification.replace(/_/g, " ")}
               </Badge>
               {proposal.requiresConfirmation && (
-                <span className="flex items-center gap-1 text-[11px] font-medium text-warning-700 bg-warning-50 px-2 py-0.5 rounded-full border border-warning-200">
-                  <AlertCircle className="h-3 w-3" />
+                <span className="flex items-center gap-1 text-[11px] font-semibold text-warning-800 bg-warning-50 px-2.5 py-0.5 rounded-full border border-warning-200 shadow-sm">
+                  <AlertCircle className="h-3 w-3 text-warning-600" />
                   Confirmation Required
                 </span>
               )}
@@ -173,7 +176,7 @@ export function ConversationalRevisionPanel({
           </div>
 
           <div className="space-y-1.5">
-            <h4 className="text-sm font-semibold text-surface-900">{proposal.changeSummary}</h4>
+            <h4 className="text-sm font-bold text-surface-900">{proposal.changeSummary}</h4>
             <p className="text-xs text-surface-600 whitespace-pre-line leading-relaxed">
               {proposal.advisoryResponse}
             </p>
@@ -182,17 +185,17 @@ export function ConversationalRevisionPanel({
           {/* Granular Operation Diffs */}
           {proposal.proposedOperations.length > 0 && (
             <div className="space-y-2 pt-1">
-              <span className="text-[11px] font-semibold text-surface-500 uppercase tracking-wide">
+              <span className="text-[11px] font-bold text-surface-500 uppercase tracking-wide">
                 Targeted Mutations:
               </span>
               <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                 {proposal.proposedOperations.map((op, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center justify-between rounded-md border border-surface-200/60 bg-surface-50/80 p-2 text-xs"
+                    className="flex items-center justify-between rounded-xl border border-surface-200/70 glass-surface-subtle p-2.5 text-xs shadow-glass-subtle"
                   >
-                    <span className="font-medium text-surface-800">{op.description}</span>
-                    <span className="rounded bg-surface-200/80 px-1.5 py-0.5 text-[10px] font-mono text-surface-600">
+                    <span className="font-semibold text-surface-800">{op.description}</span>
+                    <span className="rounded-md bg-primary-100/80 px-2 py-0.5 text-[10px] font-mono font-bold text-primary-800 border border-primary-200/60">
                       {op.type}
                     </span>
                   </div>
@@ -202,14 +205,14 @@ export function ConversationalRevisionPanel({
           )}
 
           {/* Action Confirmation Buttons */}
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-surface-100">
+          <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-surface-200/60">
             <Button
               type="button"
               variant="ghost"
               size="sm"
               onClick={handleReject}
               disabled={isApplying}
-              className="text-xs"
+              className="text-xs font-medium"
             >
               Cancel
             </Button>
@@ -220,7 +223,7 @@ export function ConversationalRevisionPanel({
                 size="sm"
                 onClick={handleApply}
                 isLoading={isApplying}
-                className="gap-1.5 text-xs font-semibold shadow-sm"
+                className="gap-1.5 text-xs font-semibold shadow-glass"
               >
                 <CheckCircle2 className="h-3.5 w-3.5" />
                 <span>Confirm & Apply Locally</span>

@@ -5,20 +5,20 @@
 
 ### 1. Architectural Principles
 
-1. **Separation of Creative AI vs. Deterministic Business Logic:**
-   - **GenAI Domain:** Concept brainstorming, theme descriptions, suggested category allocations (percentages), milestone suggestions, run-of-show sequence.
-   - **Deterministic Code Domain:** Monetary balance calculations, sum of expenses, budget overrun alerts, calendar date arithmetic, user authorization, and relational database transactions.
-   - **Principle:** *The AI never calculates the final wallet balance, and the database never executes unvalidated AI output.*
+1. **Local-First Browser-Native Runtime:**
+   - **Persistence Domain:** Browser-native IndexedDB (`eventcraft_local_db`) with 9 dedicated object stores and an in-memory fallback for SSR and testing.
+   - **Deterministic Intelligence Domain:** Structured event blueprints, category allocations, milestone timelines, and day-of run-of-show itineraries generated using rule engines and command interpretation without external cloud dependencies.
+   - **Principle:** *Zero external network requests or server endpoints are required during runtime execution.*
 
 2. **Schema-First Contracts:**
-   - All client-to-server and server-to-AI data exchanges are strictly validated using **Zod** schemas.
-   - AI outputs are structured JSON adhering to precise schema definitions.
+   - All internal data models and backup exports are strictly validated using **Zod** schemas.
+   - Database records maintain canonical typing across all object stores.
 
-3. **Multi-Tenant Data Isolation:**
-   - Every read and write query at the API/ORM layer is scoped by the authenticated user's ID (`userId`).
+3. **Workspace Data Isolation:**
+   - Browser profiles function as isolated workspaces within IndexedDB, scoping all events, budgets, tasks, and vendors to the active local profile.
 
-4. **Resilient AI Pipeline with Safe Fallbacks:**
-   - Circuit breaker and retry mechanisms for LLM calls with automatic fallback to curated domain templates when offline or rate-limited.
+4. **Exact-Cent Financial Precision:**
+   - All monetary amounts are computed in integer cents to eliminate floating-point drift and ensure exact category reconciliation.
 
 ---
 
@@ -26,53 +26,44 @@
 
 ```mermaid
 graph TB
-    subgraph ClientLayer ["Client Layer (Next.js React & TypeScript)"]
+    subgraph ClientLayer ["Client Presentation Layer (Next.js & React 19)"]
         UI_Dash["Dashboard & Event Hub"]
         UI_Wizard["Event Creation Wizard"]
         UI_Plan["Plan Viewer & Editor\n(Budget, Tasks, Vendors)"]
-        UI_Chat["Conversational Revision Panel"]
+        UI_Chat["Conversational Command Terminal"]
+        UI_Settings["Settings & Backup Manager"]
     end
 
-    subgraph APILayer ["API & Business Logic Layer (Next.js Route Handlers)"]
-        Auth_Guard["Auth & Tenancy Guard\n(NextAuth / JWT Session)"]
-        Event_Route["/api/events\n(CRUD & Isolation)"]
-        AI_Route["/api/ai/plan\n(Orchestration & Validation)"]
-        Budget_Engine["Deterministic Budget Engine\n(Totals, Allocations, Overruns)"]
-        Task_Engine["Timeline & Task Engine\n(Milestones & Schedules)"]
-        Vendor_Engine["Vendor & Quote Engine\n(Status & Comparisons)"]
+    subgraph LogicLayer ["Local Business Logic & Deterministic Engines"]
+        Auth_Context["Local Profile Context\n(Active Workspace Selection)"]
+        Plan_Engine["Local Rule Engine\n(Wedding, Birthday, Community Blueprints)"]
+        Budget_Engine["Deterministic Budget Engine\n(Integer Cents, Allocations, Overruns)"]
+        Task_Engine["Timeline & Task State Machine\n(Phases, DFS Cycle Detection)"]
+        Command_Engine["Natural-Language Command Interpreter\n(Deterministic Plan Revisions)"]
     end
 
-    subgraph ServiceLayer ["External & AI Services"]
-        LLM_Adapter["AI Planning Service Adapter\n(OpenAI / Gemini / Anthropic)"]
-        Fallback_Templates["Curated Domain Plan Templates\n(Weddings, Birthdays, Community)"]
+    subgraph DataLayer ["Browser Persistence Layer"]
+        Local_Repo["Local Repository Abstraction\n(Type-Safe CRUD & Cascading Deletions)"]
+        IndexedDB_Engine[("Browser IndexedDB\n(eventcraft_local_db - 9 Object Stores)")]
     end
 
-    subgraph DataLayer ["Data & Persistence Layer"]
-        Prisma_Client["Prisma ORM Client\n(Type-Safe Queries & Transactions)"]
-        Postgres_DB[("PostgreSQL Database")]
-    end
+    UI_Dash --> Auth_Context
+    UI_Wizard --> Auth_Context
+    UI_Plan --> Auth_Context
+    UI_Chat --> Auth_Context
+    UI_Settings --> Auth_Context
 
-    UI_Dash --> Auth_Guard
-    UI_Wizard --> Auth_Guard
-    UI_Plan --> Auth_Guard
-    UI_Chat --> Auth_Guard
+    Auth_Context --> Plan_Engine
+    Auth_Context --> Budget_Engine
+    Auth_Context --> Task_Engine
+    Auth_Context --> Command_Engine
 
-    Auth_Guard --> Event_Route
-    Auth_Guard --> AI_Route
-    Auth_Guard --> Budget_Engine
-    Auth_Guard --> Task_Engine
-    Auth_Guard --> Vendor_Engine
+    Plan_Engine --> Local_Repo
+    Budget_Engine --> Local_Repo
+    Task_Engine --> Local_Repo
+    Command_Engine --> Local_Repo
 
-    AI_Route --> LLM_Adapter
-    LLM_Adapter -.->|On Timeout/Error| Fallback_Templates
-    LLM_Adapter --> AI_Route
-
-    Event_Route --> Prisma_Client
-    Budget_Engine --> Prisma_Client
-    Task_Engine --> Prisma_Client
-    Vendor_Engine --> Prisma_Client
-
-    Prisma_Client --> Postgres_DB
+    Local_Repo --> IndexedDB_Engine
 ```
 
 ---
@@ -81,39 +72,39 @@ graph TB
 
 | Module | Primary Responsibilities | Dependencies |
 | :--- | :--- | :--- |
-| **1. Frontend & Dashboard** | Responsive UI, Event Creation Wizard, Interactive Budget Ledger, Gantt/Milestone Roadmap, Run-of-Show time blocks, Vendor directory. | React, Tailwind CSS, Lucide Icons, Zod |
-| **2. Auth & Tenancy** | User signup/login, session management, tenancy middleware (`where: { userId }`). | NextAuth.js / Secure Session Cookies |
-| **3. Event Management** | CRUD operations for events, user preferences, status tracking (`PLANNING`, `ACTIVE`, `COMPLETED`, `ARCHIVED`). | Prisma ORM, PostgreSQL |
-| **4. AI Planning Service** | Provider-independent architecture (`PlanningService`, `PlanningProvider`) supporting official Google Gemini & OpenAI SDKs. Prompt injection sanitization (`buildPlanningContext`), Zod schema validation (`GeneratedEventPlanSchema`), deterministic cents-level budget balancing & timeline calculation (`validateAndNormalizePlan`), and domain fallback recovery (`FallbackPlanService`). | `@google/generative-ai`, `openai`, `zod`, Curated Templates |
-| **5. Budget Engine (Deterministic)** | Fixed-precision addition/subtraction, category percentage-to-dollar conversions, integer minor units (cents) rounding reconciliation, actual expense tracking, remaining balance calculations, budget overrun flag generation. | TypeScript core math (cents/integers) |
-| **6. Timeline & Task Engine** | Milestone grouping, relative date offsets (e.g., `eventDate - 30 days`), status state machine (`TODO` &rarr; `IN_PROGRESS` &rarr; `DONE`), day-of run-of-show chronology. | Native Date & `Intl.DateTimeFormat` |
-| **7. Vendor Management** | Category assignment, quote tracking, contact directory, status pipeline (`RESEARCHING` &rarr; `QUOTED` &rarr; `BOOKED`). | Prisma ORM |
-| **8. Validation & Error Handling** | Client and server-side request sanitization, AI schema enforcement, standard HTTP error responses. | Zod |
+| **1. Frontend & Dashboard** | Responsive Liquid Glass UI, Event Creation Wizard, Interactive Budget Ledger, Milestone Roadmap, Run-of-Show time blocks, Vendor directory. | React 19, Tailwind CSS, Lucide Icons, Zod |
+| **2. Profile & Workspace** | Local profile creation/switching, persistent active profile state in IndexedDB. | React Context, IndexedDB |
+| **3. Event Management** | CRUD operations for events, user preferences, status tracking (`PLANNING`, `ACTIVE`, `COMPLETED`, `ARCHIVED`). | Local Repository, IndexedDB |
+| **4. Local Planning Engine** | Deterministic blueprint generation (`generateAndSaveLocalPlan`), domain archetype rules (Weddings, Birthdays, Community), cents-level balanced budget allocation, and milestone schedules. | Zod, Deterministic Rule Engine |
+| **5. Budget Engine (Deterministic)** | Fixed-precision integer cents arithmetic, category percentage-to-dollar conversions, rounding reconciliation, actual expense tracking, remaining balance calculations, budget overrun alerts. | TypeScript integer math (cents) |
+| **6. Timeline & Task Engine** | Milestone grouping, relative date offsets, task state machine (`TODO` &rarr; `IN_PROGRESS` &rarr; `COMPLETED`), directed graph dependency validation with cycle prevention. | Native Date & `Intl.DateTimeFormat` |
+| **7. Vendor Management** | Category assignment, quote tracking, contact directory, status pipeline (`RESEARCHING` &rarr; `QUOTED` &rarr; `BOOKED`). | Local Repository, IndexedDB |
+| **8. Validation & Backup** | Schema sanitization, backup JSON export and import validation with versioned schema checking. | Zod |
 
 ---
 
-### 4. Deterministic vs. AI Separation Details
+### 4. Deterministic Local Planning Flow
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor User
     participant Frontend as Frontend UI
-    participant Server as API Server (/api/ai/plan)
-    participant AI as GenAI Model API
-    participant Engine as Deterministic Math Engine
-    participant DB as PostgreSQL (Prisma)
+    participant Wizard as Event Wizard
+    participant RuleEngine as Deterministic Rule Engine
+    participant MathEngine as Financial Engine
+    participant Repo as Local Repository
+    participant DB as IndexedDB (Browser)
 
     User->>Frontend: Fill Event Details (Budget: $20,000, Guests: 100, Type: Wedding)
-    Frontend->>Server: POST /api/ai/plan (Validated Payload)
-    Server->>AI: Structured Prompt (Request theme, category % allocations, milestones)
-    AI-->>Server: Return Structured JSON (Theme: "Garden Gala", Venue: 40%, Catering: 30%, etc.)
-    Server->>Server: Validate with Zod Plan Schema
-    Server->>Engine: Pass Budget ($20,000) & Category Percentages
-    Engine-->>Server: Compute exact dollar caps ($8,000 venue, $6,000 catering), zero discrepancy
-    Server->>DB: Save Event, Preferences, Plan, Categories & Tasks in a single Transaction
-    DB-->>Server: Transaction Committed
-    Server-->>Frontend: Return Hydrated Plan with Accurate Financials
+    Frontend->>Wizard: Validate with Zod Schema
+    Wizard->>RuleEngine: Generate Blueprint (Type: Wedding, Budget: 2000000 cents)
+    RuleEngine->>MathEngine: Calculate exact cent-balanced category allocations
+    MathEngine-->>RuleEngine: Category limits ($8,000 venue, $6,000 catering), 0 discrepancy
+    RuleEngine->>Repo: Create Event, Plan, Categories, and Default Tasks
+    Repo->>DB: Atomic write to IndexedDB object stores
+    DB-->>Repo: Write confirmed
+    Repo-->>Frontend: Return Hydrated Plan with Accurate Financials
     Frontend-->>User: Display Interactive Plan & Budget Ledger
 ```
 
@@ -123,8 +114,7 @@ sequenceDiagram
 
 | Failure Mode | Detection Point | Mitigation Strategy | User Experience |
 | :--- | :--- | :--- | :--- |
-| **AI API Timeout (>15s)** | AI Planning Adapter | Abort controller triggers fallback | System alerts user: "AI is taking longer than usual. Loaded industry-standard starter plan with option to refine." |
-| **Malformed AI JSON** | Zod Schema Parser | 1 automatic repair prompt; if fails, load template | Seamless fallback without raw error dump. |
-| **Budget Overrun** | Deterministic Budget Engine | Compares `TotalSpent` vs `TotalBudget` | Prominent amber/red banner with exact overrun amount and suggested reduction categories. |
-| **Unauthorized Access** | Auth Guard Middleware | Checks `event.userId === session.userId` | 403 Forbidden redirected to login/dashboard. |
-| **Database Disconnection** | Prisma Client | Retry with exponential backoff | 503 Service Unavailable with friendly toast message. |
+| **Corrupted Backup JSON** | Zod Schema Validator | Validates version, structure, and object store arrays | Rejects invalid file with clear error toast notification. |
+| **Budget Overrun** | Deterministic Budget Engine | Compares `TotalSpent` vs `TotalBudget` in cents | Prominent amber/red banner with exact overrun amount and highlighted categories. |
+| **Cyclic Task Dependency** | Task State Machine | DFS cycle detection algorithm | Blocks invalid dependency assignment with helpful error message. |
+| **IndexedDB Unavailable** | Storage Adapter | Graceful fallback to memory store | Functional execution during SSR and private browsing modes. |

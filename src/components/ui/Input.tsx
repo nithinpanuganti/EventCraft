@@ -31,7 +31,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             error ? `${inputId}-error` : helperText ? `${inputId}-helper` : undefined
           }
           className={cn(
-            "w-full rounded-xl glass-input px-3.5 py-2.5 text-sm text-surface-900 transition-all duration-150 placeholder:text-surface-400 focus:outline-none disabled:bg-surface-100/70 disabled:text-surface-500 disabled:cursor-not-allowed",
+            "w-full rounded-xl glass-input px-3.5 py-2.5 text-sm text-surface-900 transition-all duration-160 placeholder:text-surface-400 focus:outline-none disabled:bg-surface-100/70 disabled:text-surface-500 disabled:cursor-not-allowed",
             error
               ? "border-danger-500 focus:border-danger-500 focus:ring-2 focus:ring-danger-200"
               : "border-surface-300/80 focus:border-primary-500",

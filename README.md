@@ -14,7 +14,7 @@ The application operates on a **100% browser-local architecture** powered by nat
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4.17-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)](tailwind.config.js)
 [![Vitest](https://img.shields.io/badge/Tests-76%20passed%20(9%20suites)-success?style=flat-square&logo=vitest&logoColor=white)](vitest.config.mts)
 [![Persistence](https://img.shields.io/badge/Persistence-IndexedDB%20v1%20(9%20Stores)-8A2BE2?style=flat-square)](src/lib/storage/indexed-db.ts)
-[![Architecture](https://img.shields.io/badge/Architecture-100%25%20Browser--Local%20%2F%20Zero--API-10B981?style=flat-square)](src/lib/storage/local-repository.ts)
+[![Architecture](https://img.shields.io/badge/Architecture-100%25%20Browser--Local%20%2F%20Zero--Network-10B981?style=flat-square)](src/lib/storage/local-repository.ts)
 [![License](https://img.shields.io/badge/License-Private-lightgrey?style=flat-square)](package.json)
 
 ---
@@ -49,7 +49,7 @@ EventCraft AI unifies the entire planning lifecycle into a single cohesive, high
 - **100% Browser-Local Reliability**: Operates entirely in the browser using native IndexedDB. No mandatory cloud accounts, no external database dependencies to install, and zero network latency.
 - **Financial Precision**: All financial calculations are tracked in exact integer cents, completely eliminating floating-point rounding errors and category reconciliation gaps.
 - **Structured Execution**: Tasks follow a formal state machine organized into chronological phases, complete with directed graph dependency validation to prevent scheduling conflicts.
-- **Deterministic Intelligence**: Generates structured blueprints, budgets, and itineraries using domain rule engines and pattern-matched command interpretation without cloud LLM inference or subscription APIs.
+- **Deterministic Intelligence**: Generates structured blueprints, budgets, and itineraries using domain rule engines and pattern-matched command interpretation without cloud LLM inference or subscription dependencies.
 
 ---
 
@@ -95,9 +95,22 @@ EventCraft AI unifies the entire planning lifecycle into a single cohesive, high
 
 ---
 
-## Application Views and Routes
+## Liquid Glass Design System
 
-The application features a translucent "Liquid Glass" design system built with custom Tailwind CSS utility tokens, responsive layouts, and accessible fallbacks.
+EventCraft AI features a cohesive, premium **Liquid Glass** user interface designed for depth, optical translucency, and spatial hierarchy:
+
+### Surface Hierarchy
+- **Canvas / Ambient Backdrop**: Multi-stop radial ambient light mesh combining violet (`rgba(139, 92, 246, 0.12)`), indigo (`rgba(99, 102, 241, 0.10)`), and amber (`rgba(245, 158, 11, 0.06)`) glow fields layered over a microscopic hardware-accelerated refraction grid.
+- **Navigation Shell**: Frosted sticky headers (`.glass-header`) and luminous sidebars (`.glass-sidebar`) with multi-layer backdrop blur (`blur(20px)`), subtle translucent borders, and glowing active route indicator pills.
+- **Primary Glass Cards**: Semi-transparent surface containers (`.glass-card`, `.glass-surface`) utilizing `backdrop-filter: blur(16px)` with internal specular top edge highlights (`.specular-top`).
+- **Elevated Overlays**: Modal dialogs, auth panels, and command consoles (`.glass-surface-elevated`) with deep elevation shadows (`shadow-glass-elevated`) and focused backdrop dimming.
+- **Subtle Panels & Controls**: Translucent interactive pills, chips, and secondary cards (`.glass-surface-subtle`) for dense tables, quote rows, and form inputs with visible focus rings.
+- **Accessible Data Tables**: Specialized table containers (`.glass-table-wrapper`) maintaining high-contrast readable cell content without excessive per-cell blur overhead.
+- **Motion & Accessibility**: All transitions use fluid CSS easings with full `@media (prefers-reduced-motion: reduce)` support.
+
+---
+
+## Application Views and Routes
 
 | Route | View | Description |
 | :--- | :--- | :--- |
@@ -159,13 +172,13 @@ flowchart TD
 
 ### Frontend and Client Runtime
 - **Framework**: [Next.js 15.2.1](https://nextjs.org/) (Static page generation, client-rendered App Router)
-- **UI Library**: [React 19.0.0](https://react.dev/) (Hooks, Context API, Client Components)
+- **UI Library**: [React 19.0.0](https://react.dev/) (Hooks, Context, Client Components)
 - **Styling**: [Tailwind CSS 3.4.17](https://tailwindcss.com/) with custom Liquid Glass design tokens and [PostCSS 8.4.38](https://postcss.org/)
 - **Icons**: [Lucide React 1.16.0](https://lucide.dev/)
 - **Class Utilities**: `clsx` and `tailwind-merge`
 
 ### Local Persistence and Planning
-- **Persistence**: Native Browser [IndexedDB API](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API) (Database: `eventcraft_local_db`, 9 dedicated object stores) with an in-memory fallback for SSR and testing
+- **Persistence**: Native Browser IndexedDB (Database: `eventcraft_local_db`, 9 dedicated object stores) with an in-memory fallback for SSR and testing
 - **Schema Validation**: [Zod 3.24.2](https://zod.dev/) for form validation, blueprint constraints, and backup file integrity
 - **Planning Engines**: Custom deterministic rule engine and natural-language command interpreter
 
@@ -237,7 +250,7 @@ EventCraft AI/
 - **Package Manager**: `npm` (`v10+`).
 - **Operating System**: Windows, macOS, or Linux.
 - **Database**: **None required**. EventCraft AI does not require PostgreSQL, Docker, or any database daemon.
-- **API Keys**: **None required**. EventCraft AI does not require OpenAI, Gemini, or external API keys.
+- **Cloud Credentials**: **None required**. EventCraft AI does not require OpenAI, Gemini, or external credentials.
 
 ---
 
@@ -316,7 +329,7 @@ All configuration settings are managed via environment variables. Refer to [`.en
 | `NEXT_PUBLIC_APP_URL` | Canonical URL of the application. | Optional | `http://localhost:3000` |
 
 > [!NOTE]
-> EventCraft AI requires zero backend connection strings, authentication secrets, or external API keys.
+> EventCraft AI requires zero backend connection strings, authentication secrets, or external credentials.
 
 ---
 
@@ -391,7 +404,7 @@ EventCraft AI prioritizes user privacy and data ownership through clear storage 
 ## Current Status and Roadmap
 
 ### Implemented and Verified Capabilities
-- [x] 100% Browser-local architecture with zero runtime API or database dependencies.
+- [x] 100% Browser-local architecture with zero runtime server or database dependencies.
 - [x] Multi-archetype event planning wizard (Weddings, Birthdays, Community Events).
 - [x] Complete client persistence with 9 IndexedDB stores and SSR in-memory fallback.
 - [x] Exact-cent integer budgeting engine with guaranteed zero-rounding-error balancing.

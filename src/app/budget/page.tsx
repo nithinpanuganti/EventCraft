@@ -12,12 +12,24 @@ import {
   formatMoney,
   type OverallBudgetSummary,
 } from "@/lib/budget/financial-engine";
+import dynamic from "next/dynamic";
 import { BudgetDonutChart } from "@/components/budget/BudgetDonutChart";
 import { PlannedVsActualChart } from "@/components/budget/PlannedVsActualChart";
-import { CategoryAllocationEditor } from "@/components/budget/CategoryAllocationEditor";
-import { ExpenseModal, type ExpenseRecord } from "@/components/budget/ExpenseModal";
 import { ExpenseTable } from "@/components/budget/ExpenseTable";
-import { CreateCategoryModal } from "@/components/budget/CreateCategoryModal";
+import { type ExpenseRecord } from "@/components/budget/ExpenseModal";
+
+const CategoryAllocationEditor = dynamic(
+  () => import("@/components/budget/CategoryAllocationEditor").then((mod) => mod.CategoryAllocationEditor),
+  { ssr: false }
+);
+const ExpenseModal = dynamic(
+  () => import("@/components/budget/ExpenseModal").then((mod) => mod.ExpenseModal),
+  { ssr: false }
+);
+const CreateCategoryModal = dynamic(
+  () => import("@/components/budget/CreateCategoryModal").then((mod) => mod.CreateCategoryModal),
+  { ssr: false }
+);
 import {
   AlertTriangle,
   AlertCircle,
@@ -87,72 +99,74 @@ function BudgetContent() {
       setLoadingBudget(true);
       setError(null);
 
-      const [ev, categories, expenses] = await Promise.all([
+      const [event, categories, expenses] = await Promise.all([
         getLocalEvent(eventId),
         getLocalBudgetCategories(eventId),
         getLocalExpenses(eventId),
       ]);
 
-      if (!ev) {
+      if (!event) {
         throw new Error("Event not found in local browser storage.");
       }
 
-      // Compute deterministic overall summary using cents math engine
+      // Compute overall deterministic budget summary using financial engine
+      const rawCategories = categories.map((c) => ({
+        id: c.id,
+        name: c.name,
+        allocatedAmount: c.allocatedCents / 100,
+        allocatedPercentage: c.allocatedPercentage,
+      }));
+      const rawExpenses = expenses.map((e) => ({
+        id: e.id,
+        budgetCategoryId: e.categoryId,
+        amount: e.amountCents / 100,
+        name: e.title,
+        dateIncurred: e.paidDate || e.dueDate || e.createdAt,
+      }));
       const summary = computeOverallBudgetSummary(
-        ev.totalBudget,
-        ev.currency,
-        categories.map((c) => ({
-          id: c.id,
-          name: c.name,
-          allocatedAmount: c.allocatedCents / 100,
-          allocatedPercentage: c.allocatedPercentage,
-          estimatedAmount: c.allocatedCents / 100,
-        })),
-        expenses.map((e) => ({
-          id: e.id,
-          budgetCategoryId: e.categoryId,
-          amount: e.amountCents / 100,
-          name: e.title,
-          dateIncurred: e.createdAt,
-        })),
-        80
+        event.totalBudget,
+        event.currency,
+        rawCategories,
+        rawExpenses
       );
 
-      const mappedExpenses: ExpenseRecord[] = expenses.map((e) => {
-        const cat = categories.find((c) => c.id === e.categoryId);
+      // Map local expenses to UI format
+      const mappedExpenses: ExpenseRecord[] = expenses.map((exp) => {
+        const cat = categories.find((c) => c.id === exp.categoryId);
         return {
-          id: e.id,
-          budgetCategoryId: e.categoryId,
-          categoryName: cat ? cat.name : "Uncategorized",
-          name: e.title,
-          amount: e.amountCents / 100,
-          dateIncurred: e.createdAt,
-          paymentStatus: e.paymentStatus,
-          notes: e.notes || null,
+          id: exp.id,
+          budgetCategoryId: exp.categoryId,
+          categoryName: cat?.name || "Uncategorized",
+          name: exp.title,
+          amount: exp.amountCents / 100,
+          dateIncurred: exp.paidDate || exp.dueDate || exp.createdAt,
+          paymentStatus: exp.paymentStatus,
+          notes: exp.notes ?? null,
         };
       });
 
       setBudgetData({
         event: {
-          id: ev.id,
-          title: ev.title,
-          type: ev.type,
-          totalBudget: ev.totalBudget,
-          currency: ev.currency,
-          status: ev.status,
+          id: event.id,
+          title: event.title,
+          type: event.type,
+          totalBudget: event.totalBudget,
+          currency: event.currency,
+          status: event.status,
         },
         summary,
         expenses: mappedExpenses,
       });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to load local budget.";
-      setError(msg);
+      console.error(err);
+      setError(err instanceof Error ? err.message : "Failed to load budget data.");
       setBudgetData(null);
     } finally {
       setLoadingBudget(false);
     }
   }, []);
 
+  // Sync effect when selected event changes
   useEffect(() => {
     if (selectedEventId) {
       loadBudget(selectedEventId);
@@ -292,9 +306,9 @@ function BudgetContent() {
           description="Authoritative financial calculations, planned vs. actual variance, and real-time expense tracking."
         />
 
-        {/* Event Selector Dropdown */}
-        <div className="flex items-center gap-2 self-start md:self-auto">
-          <Calendar className="h-4 w-4 text-surface-500" />
+        {/* Event Selector Dropdown with Glass Styling */}
+        <div className="flex items-center gap-2 self-start md:self-auto rounded-2xl glass-card px-3.5 py-2 shadow-glass-subtle">
+          <Calendar className="h-4 w-4 text-primary-600" />
           <select
             value={selectedEventId || ""}
             onChange={(e) => {
@@ -303,10 +317,10 @@ function BudgetContent() {
                 setSelectedEventId(id);
               });
             }}
-            className="glass-input rounded-xl px-3 py-1.5 text-xs font-medium text-surface-800 shadow-glass cursor-pointer"
+            className="glass-input rounded-xl px-3 py-1.5 text-xs font-semibold text-surface-800 shadow-glass-subtle cursor-pointer focus:outline-none"
           >
             {events.map((evt) => (
-              <option key={evt.id} value={evt.id}>
+              <option key={evt.id} value={evt.id} className="bg-white text-surface-900">
                 {evt.title} ({evt.type}) - {formatMoney(Number(evt.totalBudget), evt.currency)}
               </option>
             ))}
@@ -321,39 +335,39 @@ function BudgetContent() {
       )}
 
       {error && (
-        <div className="rounded-xl border border-rose-200/80 bg-rose-50/70 backdrop-blur-md p-4 text-xs text-rose-800 shadow-glass">
+        <div className="rounded-2xl border border-danger-200/80 bg-danger-50/80 backdrop-blur-md p-4 text-xs text-danger-800 shadow-glass">
           {error}
         </div>
       )}
 
       {summary && !loadingBudget && (
         <>
-          {/* Overrun Alert Banners */}
+          {/* Overrun Alert Banners with Glass Surface */}
           {summary.isOverBudget && (
-            <div className="flex items-start gap-3 rounded-xl border border-rose-200/80 bg-rose-50/75 backdrop-blur-md p-4 text-xs text-rose-900 shadow-glass animate-fade-in">
-              <AlertCircle className="h-5 w-5 shrink-0 text-rose-600 mt-0.5" />
+            <div className="flex items-start gap-3 rounded-2xl border border-danger-200/80 bg-danger-50/85 backdrop-blur-md p-4 text-xs text-danger-900 shadow-glass animate-page-enter">
+              <AlertCircle className="h-5 w-5 shrink-0 text-danger-600 mt-0.5" />
               <div>
-                <span className="font-semibold text-rose-950 text-sm">
+                <span className="font-bold text-danger-950 text-sm">
                   Overall Budget Overrun Warning!
                 </span>
-                <p className="mt-0.5">
+                <p className="mt-0.5 leading-relaxed">
                   Actual expenses ({formatMoney(summary.totalActualSpent, currency)}) have exceeded your target budget ({formatMoney(summary.totalBudget, currency)}) by{" "}
-                  <strong>{formatMoney(summary.overrunAmount, currency)}</strong>.
+                  <strong className="text-danger-700">{formatMoney(summary.overrunAmount, currency)}</strong>.
                 </p>
               </div>
             </div>
           )}
 
           {summary.isApproachingThreshold && !summary.isOverBudget && (
-            <div className="flex items-start gap-3 rounded-xl border border-amber-200/80 bg-amber-50/75 backdrop-blur-md p-4 text-xs text-amber-900 shadow-glass animate-fade-in">
-              <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
+            <div className="flex items-start gap-3 rounded-2xl border border-warning-200/80 bg-warning-50/85 backdrop-blur-md p-4 text-xs text-warning-900 shadow-glass animate-page-enter">
+              <AlertTriangle className="h-5 w-5 shrink-0 text-warning-600 mt-0.5" />
               <div>
-                <span className="font-semibold text-amber-950 text-sm">
+                <span className="font-bold text-warning-950 text-sm">
                   Budget Approaching Limit ({summary.utilizationPercentage}%)
                 </span>
-                <p className="mt-0.5">
+                <p className="mt-0.5 leading-relaxed">
                   Spending has reached or exceeded the {summary.warningThresholdPercent}% safety threshold. Only{" "}
-                  <strong>{formatMoney(summary.remainingBudget, currency)}</strong> remains available.
+                  <strong className="text-warning-800">{formatMoney(summary.remainingBudget, currency)}</strong> remains available.
                 </p>
               </div>
             </div>
@@ -361,54 +375,62 @@ function BudgetContent() {
 
           {/* Key Metric Stat Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card className="p-4 border-surface-200">
-              <div className="flex items-center justify-between text-surface-500 mb-1">
-                <span className="text-xs font-medium">Target Budget</span>
-                <DollarSign className="h-4 w-4 text-primary-600" />
+            <Card hoverable className="p-4">
+              <div className="flex items-center justify-between text-surface-500 mb-2">
+                <span className="text-xs font-bold uppercase tracking-wider">Target Budget</span>
+                <div className="p-1.5 rounded-lg bg-primary-100/80 text-primary-600">
+                  <DollarSign className="h-4 w-4" />
+                </div>
               </div>
-              <div className="text-lg font-bold text-surface-900">
+              <div className="text-lg sm:text-xl font-extrabold font-mono text-surface-900">
                 {formatMoney(summary.totalBudget, currency)}
               </div>
-              <div className="text-[11px] text-surface-500 mt-1">
+              <div className="text-[11px] text-surface-500 mt-1 font-medium">
                 Allocated: {formatMoney(summary.totalAllocated, currency)} ({summary.allocationUtilizationPercentage}%)
               </div>
             </Card>
 
-            <Card className="p-4 border-surface-200">
-              <div className="flex items-center justify-between text-surface-500 mb-1">
-                <span className="text-xs font-medium">Actual Spending</span>
-                <Receipt className="h-4 w-4 text-emerald-600" />
+            <Card hoverable className="p-4">
+              <div className="flex items-center justify-between text-surface-500 mb-2">
+                <span className="text-xs font-bold uppercase tracking-wider">Actual Spending</span>
+                <div className="p-1.5 rounded-lg bg-emerald-100/80 text-emerald-600">
+                  <Receipt className="h-4 w-4" />
+                </div>
               </div>
-              <div className={`text-lg font-bold ${summary.isOverBudget ? "text-rose-600" : "text-surface-900"}`}>
+              <div className={`text-lg sm:text-xl font-extrabold font-mono ${summary.isOverBudget ? "text-danger-600" : "text-surface-900"}`}>
                 {formatMoney(summary.totalActualSpent, currency)}
               </div>
-              <div className="text-[11px] text-surface-500 mt-1">
+              <div className="text-[11px] text-surface-500 mt-1 font-medium">
                 Utilization: {summary.utilizationPercentage}%
               </div>
             </Card>
 
-            <Card className="p-4 border-surface-200">
-              <div className="flex items-center justify-between text-surface-500 mb-1">
-                <span className="text-xs font-medium">Remaining Budget</span>
-                <PieChart className="h-4 w-4 text-indigo-600" />
+            <Card hoverable className="p-4">
+              <div className="flex items-center justify-between text-surface-500 mb-2">
+                <span className="text-xs font-bold uppercase tracking-wider">Remaining Budget</span>
+                <div className="p-1.5 rounded-lg bg-indigo-100/80 text-indigo-600">
+                  <PieChart className="h-4 w-4" />
+                </div>
               </div>
-              <div className={`text-lg font-bold ${summary.remainingBudget < 0 ? "text-rose-600" : "text-emerald-600"}`}>
+              <div className={`text-lg sm:text-xl font-extrabold font-mono ${summary.remainingBudget < 0 ? "text-danger-600" : "text-emerald-600"}`}>
                 {formatMoney(summary.remainingBudget, currency)}
               </div>
-              <div className="text-[11px] text-surface-500 mt-1">
+              <div className="text-[11px] text-surface-500 mt-1 font-medium">
                 {summary.remainingBudget < 0 ? "Over budget limit" : "Available to spend"}
               </div>
             </Card>
 
-            <Card className="p-4 border-surface-200">
-              <div className="flex items-center justify-between text-surface-500 mb-1">
-                <span className="text-xs font-medium">Unallocated Funds</span>
-                <Layers className="h-4 w-4 text-amber-600" />
+            <Card hoverable className="p-4">
+              <div className="flex items-center justify-between text-surface-500 mb-2">
+                <span className="text-xs font-bold uppercase tracking-wider">Unallocated</span>
+                <div className="p-1.5 rounded-lg bg-amber-100/80 text-amber-600">
+                  <Layers className="h-4 w-4" />
+                </div>
               </div>
-              <div className="text-lg font-bold text-surface-900">
+              <div className="text-lg sm:text-xl font-extrabold font-mono text-surface-900">
                 {formatMoney(summary.unallocatedBudget, currency)}
               </div>
-              <div className="text-[11px] text-surface-500 mt-1">
+              <div className="text-[11px] text-surface-500 mt-1 font-medium">
                 Ready for category assignment
               </div>
             </Card>
@@ -416,9 +438,9 @@ function BudgetContent() {
 
           {/* Visual Charts Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="p-5 border-surface-200">
-              <div className="flex items-center justify-between mb-4 pb-2 border-b border-surface-100">
-                <h3 className="text-sm font-semibold text-surface-900 flex items-center gap-2">
+            <Card className="p-5 sm:p-6">
+              <div className="flex items-center justify-between mb-4 pb-3 border-b border-surface-200/60">
+                <h3 className="text-sm font-bold text-surface-900 flex items-center gap-2">
                   <PieChart className="h-4 w-4 text-primary-600" />
                   <span>Category Allocation Distribution</span>
                 </h3>
@@ -431,9 +453,9 @@ function BudgetContent() {
               />
             </Card>
 
-            <Card className="p-5 border-surface-200">
-              <div className="flex items-center justify-between mb-4 pb-2 border-b border-surface-100">
-                <h3 className="text-sm font-semibold text-surface-900 flex items-center gap-2">
+            <Card className="p-5 sm:p-6">
+              <div className="flex items-center justify-between mb-4 pb-3 border-b border-surface-200/60">
+                <h3 className="text-sm font-bold text-surface-900 flex items-center gap-2">
                   <Receipt className="h-4 w-4 text-emerald-600" />
                   <span>Planned Allocation vs. Actual Spent</span>
                 </h3>
@@ -446,11 +468,11 @@ function BudgetContent() {
           </div>
 
           {/* Category Allocations Section */}
-          <Card className="p-5 border-surface-200">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-surface-100">
+          <Card className="p-5 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-surface-200/60">
               <div>
-                <h3 className="text-sm font-semibold text-surface-900">Budget Categories</h3>
-                <p className="text-xs text-surface-500">
+                <h3 className="text-sm font-bold text-surface-900">Budget Categories</h3>
+                <p className="text-xs text-surface-500 mt-0.5">
                   Approved allocations, live variance, and category-level overrun alerts.
                 </p>
               </div>
@@ -459,16 +481,16 @@ function BudgetContent() {
                   size="sm"
                   variant="outline"
                   onClick={() => setIsCreateCategoryModalOpen(true)}
-                  className="gap-1.5 text-xs"
+                  className="gap-1.5 text-xs font-medium shadow-glass-subtle"
                 >
-                  <PlusCircle className="h-3.5 w-3.5" />
+                  <PlusCircle className="h-3.5 w-3.5 text-primary-600" />
                   <span>Add Category</span>
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => setIsAllocationEditorOpen(!isAllocationEditorOpen)}
-                  className="gap-1.5 text-xs"
+                  className="gap-1.5 text-xs font-medium shadow-glass-subtle"
                 >
                   <Edit3 className="h-3.5 w-3.5" />
                   <span>{isAllocationEditorOpen ? "Close Editor" : "Adjust Allocations"}</span>
@@ -477,8 +499,8 @@ function BudgetContent() {
             </div>
 
             {isAllocationEditorOpen ? (
-              <div className="p-4 bg-surface-50 rounded-xl border border-surface-200">
-                <h4 className="text-xs font-semibold text-surface-800 mb-2">Adjust Category Allocations</h4>
+              <div className="p-4 glass-surface-subtle rounded-2xl border border-surface-200/80 shadow-glass-subtle">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-surface-800 mb-3">Adjust Category Allocations</h4>
                 <CategoryAllocationEditor
                   categories={summary.categorySummaries}
                   totalBudget={summary.totalBudget}
@@ -488,60 +510,60 @@ function BudgetContent() {
                 />
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="glass-table-wrapper">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-surface-50 text-surface-600 font-semibold border-b border-surface-200">
+                  <thead className="glass-table-thead text-surface-700 font-semibold border-b border-surface-200/70">
                     <tr>
-                      <th className="py-2.5 px-3">Category</th>
-                      <th className="py-2.5 px-3 text-right">Planned Allocation</th>
-                      <th className="py-2.5 px-3 text-right">Actual Spent</th>
-                      <th className="py-2.5 px-3 text-right">Remaining Balance</th>
-                      <th className="py-2.5 px-3 text-center">Utilization</th>
-                      <th className="py-2.5 px-3 text-center">Status</th>
-                      <th className="py-2.5 px-3 text-right">Actions</th>
+                      <th className="py-3 px-3.5">Category</th>
+                      <th className="py-3 px-3.5 text-right">Planned Allocation</th>
+                      <th className="py-3 px-3.5 text-right">Actual Spent</th>
+                      <th className="py-3 px-3.5 text-right">Remaining Balance</th>
+                      <th className="py-3 px-3.5 text-center">Utilization</th>
+                      <th className="py-3 px-3.5 text-center">Status</th>
+                      <th className="py-3 px-3.5 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-surface-100">
+                  <tbody className="divide-y divide-surface-200/50">
                     {summary.categorySummaries.map((cat) => (
-                      <tr key={cat.id} className="hover:bg-surface-50/70 transition-colors">
-                        <td className="py-2.5 px-3 font-medium text-surface-900">
+                      <tr key={cat.id} className="hover:bg-white/60 transition-colors">
+                        <td className="py-3 px-3.5 font-bold text-surface-900">
                           {cat.name}
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-medium text-surface-800">
+                        <td className="py-3 px-3.5 text-right font-mono font-medium text-surface-800">
                           {formatMoney(cat.allocatedAmount, currency)}
-                          <span className="text-[11px] text-surface-400 block">
+                          <span className="text-[11px] text-surface-400 block font-normal">
                             {cat.allocatedPercentage}%
                           </span>
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-medium text-surface-800">
+                        <td className="py-3 px-3.5 text-right font-mono font-medium text-surface-800">
                           {formatMoney(cat.totalActualSpent, currency)}
-                          <span className="text-[11px] text-surface-400 block">
+                          <span className="text-[11px] text-surface-400 block font-normal">
                             {cat.expenseCount} record{cat.expenseCount !== 1 ? "s" : ""}
                           </span>
                         </td>
-                        <td className={`py-2.5 px-3 text-right font-mono font-semibold ${
-                          cat.remainingBalance < 0 ? "text-rose-600" : "text-emerald-600"
+                        <td className={`py-3 px-3.5 text-right font-mono font-bold ${
+                          cat.remainingBalance < 0 ? "text-danger-600" : "text-emerald-600"
                         }`}>
                           {formatMoney(cat.remainingBalance, currency)}
                           {cat.isOverBudget && (
-                            <span className="text-[10px] text-rose-500 block font-normal">
+                            <span className="text-[10px] text-danger-500 block font-semibold">
                               Over by {formatMoney(cat.overrunAmount, currency)}
                             </span>
                           )}
                         </td>
-                        <td className="py-2.5 px-3 text-center font-mono">
+                        <td className="py-3 px-3.5 text-center font-mono font-bold">
                           {cat.utilizationPercentage}%
                         </td>
-                        <td className="py-2.5 px-3 text-center">
+                        <td className="py-3 px-3.5 text-center">
                           {cat.isOverBudget ? (
-                            <Badge variant="danger" className="text-[10px]">Over Budget</Badge>
+                            <Badge variant="danger" size="sm">Over Budget</Badge>
                           ) : cat.isApproachingThreshold ? (
-                            <Badge variant="warning" className="text-[10px]">Near Limit</Badge>
+                            <Badge variant="warning" size="sm">Near Limit</Badge>
                           ) : (
-                            <Badge variant="success" className="text-[10px]">On Track</Badge>
+                            <Badge variant="success" size="sm">On Track</Badge>
                           )}
                         </td>
-                        <td className="py-2.5 px-3 text-right">
+                        <td className="py-3 px-3.5 text-right">
                           <Button
                             variant="ghost"
                             size="sm"
@@ -552,7 +574,7 @@ function BudgetContent() {
                                 ? "Cannot delete category with logged expenses"
                                 : "Delete unused category"
                             }
-                            className="text-surface-400 hover:text-rose-600 text-[11px] h-7 px-2"
+                            className="text-surface-400 hover:text-danger-600 text-[11px] h-7 px-2 rounded-lg"
                           >
                             Remove
                           </Button>
@@ -566,11 +588,11 @@ function BudgetContent() {
           </Card>
 
           {/* Actual Expense Ledger Section */}
-          <Card className="p-5 border-surface-200">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-surface-100">
+          <Card className="p-5 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-surface-200/60">
               <div>
-                <h3 className="text-sm font-semibold text-surface-900">Recorded Actual Expenses</h3>
-                <p className="text-xs text-surface-500">
+                <h3 className="text-sm font-bold text-surface-900">Recorded Actual Expenses</h3>
+                <p className="text-xs text-surface-500 mt-0.5">
                   Confirmed payments, vendor deposits, invoices, and expense receipts.
                 </p>
               </div>
@@ -580,7 +602,7 @@ function BudgetContent() {
                   setEditingExpense(null);
                   setIsExpenseModalOpen(true);
                 }}
-                className="gap-1.5 text-xs self-start sm:self-auto"
+                className="gap-1.5 text-xs self-start sm:self-auto shadow-glass font-medium"
               >
                 <PlusCircle className="h-3.5 w-3.5" />
                 <span>Record Expense</span>
@@ -636,4 +658,3 @@ export default function BudgetPage() {
     </Suspense>
   );
 }
-

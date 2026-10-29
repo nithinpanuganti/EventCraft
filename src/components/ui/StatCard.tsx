@@ -24,31 +24,31 @@ export function StatCard({
   return (
     <div
       className={cn(
-        "glass-card-interactive p-5",
+        "glass-card-interactive p-5 relative overflow-hidden",
         className
       )}
       {...props}
     >
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wider text-surface-500">
+        <span className="text-xs font-bold uppercase tracking-wider text-surface-500">
           {title}
         </span>
         {Icon && (
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-50/80 text-primary-600 border border-primary-200/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] backdrop-blur-sm">
-            <Icon className="h-4 w-4" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary-50 to-primary-100/90 text-primary-600 border border-primary-200/70 shadow-[inset_0_1px_1px_rgba(255,255,255,0.95),0_2px_6px_rgba(124,58,237,0.08)] backdrop-blur-md">
+            <Icon className="h-5 w-5" />
           </div>
         )}
       </div>
 
       <div className="mt-3.5 flex items-baseline gap-2">
-        <div className="text-2xl font-bold tracking-tight text-surface-900 sm:text-3xl">{value}</div>
+        <div className="text-2xl font-extrabold tracking-tight text-surface-900 sm:text-3xl">{value}</div>
         {change && (
           <span
             className={cn(
-              "text-xs font-semibold px-1.5 py-0.5 rounded-md",
+              "text-xs font-semibold px-2 py-0.5 rounded-full border",
               isPositive
-                ? "bg-success-50 text-success-700 border border-success-200/60"
-                : "bg-surface-100 text-surface-600 border border-surface-200"
+                ? "bg-success-50 text-success-700 border-success-200/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]"
+                : "bg-surface-100 text-surface-600 border-surface-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]"
             )}
           >
             {change}
@@ -56,7 +56,7 @@ export function StatCard({
         )}
       </div>
 
-      {description && <p className="mt-1 text-xs text-surface-500 leading-normal">{description}</p>}
+      {description && <p className="mt-1.5 text-xs text-surface-500 leading-normal">{description}</p>}
     </div>
   );
 }

@@ -5,11 +5,16 @@ import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import dynamic from "next/dynamic";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { PlanViewer } from "@/components/events/PlanViewer";
-import { ConversationalRevisionPanel } from "@/components/planner/ConversationalRevisionPanel";
-import { GeneratedEventPlan } from "@/lib/local-planning/schema";
+
+const ConversationalRevisionPanel = dynamic(
+  () => import("@/components/planner/ConversationalRevisionPanel").then((mod) => mod.ConversationalRevisionPanel),
+  { ssr: false }
+);
+import type { GeneratedEventPlan } from "@/lib/local-planning/schema";
 import { Sparkles, Calendar, PlusCircle, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/components/layout/AuthContext";
@@ -37,7 +42,7 @@ function PlannerContent() {
     }
   }, [events, selectedEventId]);
 
-  // 2. Fetch selected event details and plan from local storage
+  // Fetch selected event details and plan from local storage
   const loadEventPlan = useCallback(async (evId: string) => {
     setLoading(true);
     setError(null);
@@ -142,7 +147,7 @@ function PlannerContent() {
     }
   }, [selectedEventId, loadEventPlan]);
 
-  // 3. Generate or regenerate plan locally
+  // Generate or regenerate plan locally
   const handleGeneratePlan = async () => {
     if (!selectedEventId) return;
     setGenerating(true);
@@ -169,14 +174,14 @@ function PlannerContent() {
         badge={
           <Badge variant="primary">
             <Sparkles className="h-3.5 w-3.5 mr-1" />
-            Phase 5 GenAI Engine
+            GenAI Planning Engine
           </Badge>
         }
         actions={
           <div className="flex items-center gap-2">
             <Link href="/events/new">
-              <Button size="sm" variant="outline" className="gap-1.5">
-                <PlusCircle className="h-4 w-4" />
+              <Button size="sm" variant="outline" className="gap-1.5 shadow-glass-subtle font-medium">
+                <PlusCircle className="h-4 w-4 text-primary-600" />
                 <span>New Event</span>
               </Button>
             </Link>
@@ -184,18 +189,18 @@ function PlannerContent() {
         }
       />
 
-      {/* Event Selector Bar */}
+      {/* Event Selector Bar in Luminous Glass */}
       {events.length > 0 && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-surface-200 bg-white p-3 shadow-subtle">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl glass-card p-4 shadow-glass specular-top">
           <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold text-surface-600">Active Event:</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-surface-600">Active Event:</span>
             <select
               value={selectedEventId || ""}
               onChange={(e) => setSelectedEventId(e.target.value)}
-              className="rounded-lg border border-surface-300 bg-surface-50 px-3 py-1.5 text-xs font-semibold text-surface-900 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="rounded-xl glass-input px-3.5 py-1.5 text-xs font-semibold text-surface-900 focus:outline-none focus:ring-2 focus:ring-primary-500 cursor-pointer"
             >
               {events.map((ev) => (
-                <option key={ev.id} value={ev.id}>
+                <option key={ev.id} value={ev.id} className="bg-white text-surface-900">
                   {ev.title} ({ev.type} • {ev.status})
                 </option>
               ))}
@@ -207,7 +212,7 @@ function PlannerContent() {
               size="sm"
               onClick={handleGeneratePlan}
               disabled={generating}
-              className="gap-1.5 bg-primary-600 hover:bg-primary-700"
+              className="gap-1.5 shadow-glass font-medium"
             >
               <Sparkles className={`h-3.5 w-3.5 ${generating ? "animate-spin" : ""}`} />
               <span>{generating ? "Generating Plan..." : currentPlan ? "Regenerate Plan" : "Generate Plan"}</span>
@@ -218,9 +223,9 @@ function PlannerContent() {
 
       {/* Error alert */}
       {error && (
-        <div className="rounded-xl border border-danger-200 bg-danger-50 p-4 text-xs text-danger-700 flex items-center justify-between">
+        <div className="rounded-2xl glass-surface p-4 text-xs text-danger-700 border border-danger-200/80 bg-danger-50/80 flex items-center justify-between shadow-glass-subtle">
           <div className="flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 shrink-0" />
+            <AlertCircle className="h-4 w-4 shrink-0 text-danger-600" />
             <span>{error}</span>
           </div>
           <Button size="sm" variant="outline" onClick={() => handleGeneratePlan()} className="h-7 text-xs border-danger-300">
@@ -232,8 +237,8 @@ function PlannerContent() {
       {/* Loading state */}
       {loading ? (
         <div className="space-y-4">
-          <Skeleton className="h-24 w-full rounded-xl" />
-          <Skeleton className="h-64 w-full rounded-xl" />
+          <Skeleton className="h-24 w-full rounded-2xl" />
+          <Skeleton className="h-64 w-full rounded-2xl" />
         </div>
       ) : !user ? (
         <EmptyState

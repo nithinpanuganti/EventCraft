@@ -87,7 +87,7 @@ Existing generic AI chatbots offer unstructured, conversational text responses t
 - **NFR-1 [Security & Auth]:**
   - Secure session handling.
   - Authorization check on every single event query and mutation (enforce tenancy: `where: { id: eventId, userId: session.user.id }`).
-  - Strict zero-leakage of API keys to client browsers; all AI calls are server-side only.
+  - Zero external service keys required; all planning logic runs locally in the browser.
 - **NFR-2 [Accuracy & Determinism]:**
   - Financial math performed strictly with fixed-precision integers/cents or Decimal types in code, never by the LLM.
   - Date offsets (milestones relative to event date) calculated via standard date utilities.

@@ -21,7 +21,7 @@ import {
 } from "./local-repository";
 import { NAVIGATION_ITEMS } from "../navigation";
 
-describe("Browser-Only Architecture & Zero-API Verification", () => {
+describe("Browser-Only Architecture & Zero-Network Verification", () => {
   beforeEach(async () => {
     await resetAllLocalData();
     resetMemorySession();

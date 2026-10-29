@@ -10,10 +10,10 @@ export function Skeleton({ className, variant = "rectangular", ...props }: Skele
     <div
       aria-hidden="true"
       className={cn(
-        "animate-pulse bg-surface-200",
+        "animate-pulse bg-surface-200/70 border border-surface-200/40 backdrop-blur-sm",
         variant === "circular" && "rounded-full",
-        variant === "text" && "h-4 rounded",
-        variant === "rectangular" && "rounded-lg",
+        variant === "text" && "h-4 rounded-lg",
+        variant === "rectangular" && "rounded-xl",
         className
       )}
       {...props}

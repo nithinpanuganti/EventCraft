@@ -2,12 +2,12 @@
 
 ## 1. Overview
 
-EventCraft AI employs a multi-tiered automated testing strategy using **Vitest** for fast unit and integration tests, strict TypeScript checks (`tsc --noEmit`), and Next.js ESLint linting.
+EventCraft AI employs an automated testing strategy using **Vitest** for unit and integration testing, strict TypeScript checking (`tsc --noEmit`), and Next.js ESLint linting.
 
 Current Suite Statistics:
-- **Test Files:** 13 passed (13)
-- **Total Tests:** 96 passed (96)
-- **Code Coverage:** Authentication, Wizard Validations, Planning Engine, Fallback Templates, Financial Engine, Budget Service, Task State Machine, Timeline Service, Vendor Directory, Quotations, Conversational Revisions, and End-to-End Critical Journey.
+- **Test Files:** 9 passed (9)
+- **Total Tests:** 76 passed (76)
+- **Code Coverage:** Local Storage & IndexedDB, Browser-Only Architecture & Zero-Network Verification, Local Repository, Deterministic Rule Engine, Command Interpreter, Financial Engine, Task State Machine, Wizard Validation, and General Schema Validation.
 
 ---
 
@@ -21,9 +21,9 @@ npm test
 npx vitest
 
 # Run a specific test suite
-npx vitest run src/lib/e2e-journey.test.ts
 npx vitest run src/lib/budget/financial.test.ts
 npx vitest run src/lib/timeline/task-state-machine.test.ts
+npx vitest run src/lib/storage/browser-architecture.test.ts
 
 # Run static type checks
 npm run type-check
@@ -39,26 +39,23 @@ npm run build
 
 ## 3. Test Suites Structure
 
-| Test File | Category | Focus Areas |
-| :--- | :--- | :--- |
-| `src/lib/auth.test.ts` | Security & Auth | Password hashing, bcrypt verification, signed JWT token generation, tampered token rejection |
-| `src/lib/validations/wizard.test.ts` | Form Validation | Wizard 5-step validation schemas, date constraints, guest counts, budget limits |
-| `src/lib/validations/validations.test.ts` | API Validation | User login/register schemas, event update schemas |
-| `src/lib/data-access/events.test.ts` | Tenancy & DB | Multi-tenant event queries, cross-user read/update/delete rejection, draft persistence |
-| `src/lib/planning/providers.test.ts` | AI Integration | Gemini and OpenAI provider adapters, timeout handling, error propagation |
-| `src/lib/planning/planning.test.ts` | AI Orchestration | PlanningService execution, JSON schema adherence, curated fallback activation |
-| `src/lib/budget/financial.test.ts` | Financial Engine | Cents arithmetic, planned vs actual variance, zero-budget division safety, overrun thresholds |
-| `src/lib/budget/budget-service.test.ts` | Budget Service | Category creation ceilings, bulk allocation adjustments, expense scoping, cross-event prevention |
-| `src/lib/timeline/task-state-machine.test.ts` | State Machine | Allowed status transitions, invalid transition rejection, cycle detection in DAG, blocking resolution |
-| `src/lib/timeline/timeline-service.test.ts` | Timeline Service | Task CRUD, dependency verification, run-of-show schedule management, tenant isolation |
-| `src/lib/vendors/vendor-service.test.ts` | Vendor & Quotes | Directory CRUD, category filtering, quote creation, atomic quote selection, cross-event quote denial |
-| `src/lib/revisions/revision-service.test.ts` | Revisions | Intent classification, proposal generation, consequential confirmation checks, atomic application |
-| `src/lib/e2e-journey.test.ts` | End-to-End | Complete lifecycle: Draft -> Plan -> Expense -> Task -> Quote -> Consequential Revision |
+| Test File | Category | Tests | Focus Areas |
+| :--- | :--- | :---: | :--- |
+| `src/lib/storage/browser-architecture.test.ts` | Architecture Verification | 5 | Zero network calls verification, profile switching/deletion, event cascade cleanup, corrupted backup rejection, navigation route integrity |
+| `src/lib/storage/indexed-db.test.ts` | IndexedDB Engine | 4 | IndexedDB CRUD, memory fallback, versioned backup export, and schema-validated restore |
+| `src/lib/storage/local-repository.test.ts` | Local Repository | 4 | Passcode hashing, event scoping, task dependencies, vendor quotes, and budget CRUD |
+| `src/lib/local-planning/rule-engine.test.ts` | Planning Rule Engine | 5 | Wedding, Birthday, and Community blueprints, exact-cent balanced budget allocation, zero-budget division safety |
+| `src/lib/local-planning/command-interpreter.test.ts` | Command Interpreter | 9 | Natural language commands (`add task`, `complete task`, `change date`, `adjust budget`, `add expense`, `regenerate plan`, `update theme`, `show remaining budget`), unsupported command guidance |
+| `src/lib/budget/financial.test.ts` | Financial Engine | 12 | Integer-cents arithmetic, category variance, zero-budget division safety, overrun thresholds |
+| `src/lib/timeline/task-state-machine.test.ts` | State Machine | 16 | Transition state machine, cyclic dependency detection (DFS), prerequisite chains |
+| `src/lib/validations/wizard.test.ts` | Wizard Validation | 15 | 5-step event wizard schema boundaries, budget limits, future date constraints |
+| `src/lib/validations/validations.test.ts` | General Validation | 6 | Profile creation schemas, event update schemas, partial update guardrails |
+| **Total** | **9 Suites** | **76** | **All 76 tests passing (100% success rate)** |
 
 ---
 
-## 4. Mocking Guidelines
+## 4. Verification Guidelines
 
-- **External AI Providers:** Always mocked in routine CI runs using Vitest `vi.mock`. Live API calls should only be executed in dedicated staging environments with valid `GEMINI_API_KEY` or `OPENAI_API_KEY`.
-- **Database Access:** Unit and integration tests mock `@/lib/prisma` to verify exact query parameters and tenant scopes (`where: { userId }`).
-- **No Floating-Point Arithmetic:** Financial tests assert exact integer minor units (cents) to ensure zero precision drift across platforms.
+- **Zero Network Execution:** Tests assert that global fetch and network requests are never invoked during local planning operations.
+- **No Floating-Point Arithmetic:** Financial tests assert exact integer minor units (cents) to guarantee zero precision drift.
+- **State Machine Integrity:** Tests verify cycle detection using depth-first search (DFS) to prevent task dependency deadlock.

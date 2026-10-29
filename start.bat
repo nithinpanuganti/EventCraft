@@ -39,7 +39,7 @@ if not exist ".env" (
 )
 
 echo [INFO] Storage: Browser-native IndexedDB (eventcraft_local_db)
-echo [INFO] Mode:    100%% Local-First (Zero external APIs or database required)
+echo [INFO] Mode:    100%% Local-First (Zero external network dependencies or database required)
 echo.
 echo ========================================================
 echo  Application will be accessible at:

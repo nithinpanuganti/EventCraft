@@ -37,18 +37,18 @@ export function ExpenseTable({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "PAID":
-        return <Badge variant="success" className="text-[10px]">Paid</Badge>;
+        return <Badge variant="success" size="sm">Paid</Badge>;
       case "OVERDUE":
-        return <Badge variant="danger" className="text-[10px]">Overdue</Badge>;
+        return <Badge variant="danger" size="sm">Overdue</Badge>;
       default:
-        return <Badge variant="warning" className="text-[10px]">Pending</Badge>;
+        return <Badge variant="warning" size="sm">Pending</Badge>;
     }
   };
 
   if (expenses.length === 0) {
     return (
-      <div className="flex h-36 flex-col items-center justify-center rounded-xl border border-dashed border-surface-200 bg-surface-50 text-xs text-surface-500">
-        <p>No actual expenses logged yet.</p>
+      <div className="flex h-36 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-surface-300/70 glass-surface-subtle text-xs text-surface-500 shadow-glass-subtle">
+        <p className="font-semibold text-surface-700">No actual expenses logged yet.</p>
         <p className="mt-1 text-[11px] text-surface-400">
           Click &ldquo;Record Expense&rdquo; above to log vendor deposits, purchases, or invoices.
         </p>
@@ -57,22 +57,22 @@ export function ExpenseTable({
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-surface-200">
+    <div className="glass-table-wrapper">
       <table className="w-full text-left text-xs">
-        <thead className="bg-surface-50 text-surface-600 font-semibold border-b border-surface-200">
+        <thead className="glass-table-thead text-surface-700 font-semibold border-b border-surface-200/70">
           <tr>
-            <th className="py-2.5 px-3">Description</th>
-            <th className="py-2.5 px-3">Category</th>
-            <th className="py-2.5 px-3">Date</th>
-            <th className="py-2.5 px-3 text-right">Amount</th>
-            <th className="py-2.5 px-3 text-center">Status</th>
-            <th className="py-2.5 px-3 text-right">Actions</th>
+            <th className="py-3 px-3.5">Description</th>
+            <th className="py-3 px-3.5">Category</th>
+            <th className="py-3 px-3.5">Date</th>
+            <th className="py-3 px-3.5 text-right">Amount</th>
+            <th className="py-3 px-3.5 text-center">Status</th>
+            <th className="py-3 px-3.5 text-right">Actions</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-surface-100">
+        <tbody className="divide-y divide-surface-200/50">
           {expenses.map((exp) => (
-            <tr key={exp.id} className="hover:bg-surface-50/70 transition-colors">
-              <td className="py-2.5 px-3 font-medium text-surface-900">
+            <tr key={exp.id} className="hover:bg-white/60 transition-colors">
+              <td className="py-3 px-3.5 font-semibold text-surface-900">
                 <div>{exp.name}</div>
                 {exp.notes && (
                   <div className="text-[11px] text-surface-500 font-normal truncate max-w-xs">
@@ -80,27 +80,27 @@ export function ExpenseTable({
                   </div>
                 )}
               </td>
-              <td className="py-2.5 px-3 text-surface-600">
-                <span className="inline-block px-2 py-0.5 rounded bg-surface-100 text-[11px] font-medium text-surface-700">
+              <td className="py-3 px-3.5 text-surface-600">
+                <span className="inline-block px-2.5 py-0.5 rounded-full glass-surface-subtle border border-surface-200/80 text-[11px] font-semibold text-surface-700 shadow-glass-subtle">
                   {exp.categoryName}
                 </span>
               </td>
-              <td className="py-2.5 px-3 text-surface-500 font-mono text-[11px]">
+              <td className="py-3 px-3.5 text-surface-500 font-mono text-[11px]">
                 {new Date(exp.dateIncurred).toLocaleDateString()}
               </td>
-              <td className="py-2.5 px-3 text-right font-mono font-semibold text-surface-900">
+              <td className="py-3 px-3.5 text-right font-mono font-bold text-surface-900">
                 {formatMoney(exp.amount, currency)}
               </td>
-              <td className="py-2.5 px-3 text-center">
+              <td className="py-3 px-3.5 text-center">
                 {getStatusBadge(exp.paymentStatus)}
               </td>
-              <td className="py-2.5 px-3 text-right">
+              <td className="py-3 px-3.5 text-right">
                 <div className="flex items-center justify-end gap-1">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => onEdit(exp)}
-                    className="h-7 w-7 p-0 text-surface-500 hover:text-surface-900"
+                    className="h-7 w-7 p-0 text-surface-400 hover:text-surface-900 rounded-lg"
                     title="Edit expense"
                   >
                     <Edit2 className="h-3.5 w-3.5" />
@@ -110,7 +110,7 @@ export function ExpenseTable({
                     size="sm"
                     onClick={() => handleDelete(exp.id, exp.name)}
                     disabled={deletingId === exp.id}
-                    className="h-7 w-7 p-0 text-rose-500 hover:text-rose-700 hover:bg-rose-50"
+                    className="h-7 w-7 p-0 text-danger-500 hover:text-danger-700 hover:bg-danger-50/80 rounded-lg"
                     title="Delete expense"
                   >
                     <Trash2 className="h-3.5 w-3.5" />

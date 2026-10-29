@@ -671,8 +671,8 @@ export function EventWizard() {
                     }}
                     className={`text-left rounded-xl border p-4 transition-all focus:outline-none focus:ring-2 focus:ring-primary-500 ${
                       isSelected
-                        ? "border-primary-600 bg-primary-50/50 shadow-subtle ring-2 ring-primary-500/20"
-                        : "border-surface-200 bg-white hover:border-surface-300"
+                        ? "border-primary-500 bg-primary-50/75 shadow-glass-subtle ring-2 ring-primary-400/25 backdrop-blur-md"
+                        : "border-surface-200/80 bg-white/65 hover:bg-white/90 hover:border-surface-300/90 backdrop-blur-sm"
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -759,7 +759,7 @@ export function EventWizard() {
               />
             </div>
 
-            <div className="rounded-xl border border-surface-200 bg-surface-50 p-4 flex items-start gap-3">
+            <div className="rounded-2xl glass-surface-subtle border border-surface-200/80 shadow-glass-subtle p-4 flex items-start gap-3">
               <MapPin className="h-4 w-4 text-primary-600 mt-0.5 shrink-0" />
               <div className="text-xs text-surface-600">
                 <span className="font-semibold text-surface-900">Planning Tip:</span> Providing an
@@ -928,7 +928,7 @@ export function EventWizard() {
 
           <CardContent className="space-y-6 text-sm">
             {/* Section 1 Review */}
-            <div className="rounded-xl border border-surface-200 bg-surface-50 p-4">
+            <div className="rounded-2xl glass-surface-subtle border border-surface-200/80 shadow-glass-subtle p-4">
               <div className="flex items-center justify-between border-b border-surface-200 pb-2">
                 <span className="font-bold text-surface-900 flex items-center gap-2">
                   <Sparkles className="h-4 w-4 text-primary-600" /> Event Identity
@@ -960,7 +960,7 @@ export function EventWizard() {
             </div>
 
             {/* Section 2 Review */}
-            <div className="rounded-xl border border-surface-200 bg-surface-50 p-4">
+            <div className="rounded-2xl glass-surface-subtle border border-surface-200/80 shadow-glass-subtle p-4">
               <div className="flex items-center justify-between border-b border-surface-200 pb-2">
                 <span className="font-bold text-surface-900 flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-primary-600" /> Schedule & Venue
@@ -990,7 +990,7 @@ export function EventWizard() {
             </div>
 
             {/* Section 3 Review */}
-            <div className="rounded-xl border border-surface-200 bg-surface-50 p-4">
+            <div className="rounded-2xl glass-surface-subtle border border-surface-200/80 shadow-glass-subtle p-4">
               <div className="flex items-center justify-between border-b border-surface-200 pb-2">
                 <span className="font-bold text-surface-900 flex items-center gap-2">
                   <DollarSign className="h-4 w-4 text-primary-600" /> Scope & Budget
@@ -1020,7 +1020,7 @@ export function EventWizard() {
             </div>
 
             {/* Section 4 Review */}
-            <div className="rounded-xl border border-surface-200 bg-surface-50 p-4">
+            <div className="rounded-2xl glass-surface-subtle border border-surface-200/80 shadow-glass-subtle p-4">
               <div className="flex items-center justify-between border-b border-surface-200 pb-2">
                 <span className="font-bold text-surface-900 flex items-center gap-2">
                   <Palette className="h-4 w-4 text-primary-600" /> Preferences & Accommodations
@@ -1070,7 +1070,7 @@ export function EventWizard() {
             </div>
 
             {/* AI Generator Notice with action button */}
-            <div className="rounded-xl border border-primary-200 bg-primary-50/70 p-4 flex items-start justify-between gap-4">
+            <div className="rounded-2xl glass-card-accent p-5 flex items-start justify-between gap-4 shadow-glass-subtle">
               <div className="flex items-start gap-3">
                 <ShieldCheck className="h-5 w-5 text-primary-600 shrink-0 mt-0.5" />
                 <div className="text-xs text-primary-900 space-y-1">
@@ -1109,7 +1109,7 @@ export function EventWizard() {
                 type="button"
                 onClick={handleGeneratePlan}
                 disabled={isGeneratingPlan || saveStatus === "saving"}
-                className="gap-2 bg-primary-600 hover:bg-primary-700 text-white"
+                className="gap-2 shadow-glass font-semibold"
               >
                 <Sparkles className={`h-4 w-4 ${isGeneratingPlan ? "animate-spin" : ""}`} />
                 <span>{isGeneratingPlan ? "Generating Plan..." : "Generate AI Event Plan"}</span>

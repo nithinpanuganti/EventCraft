@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   LocalProfile,
@@ -94,10 +94,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshSession = useCallback(async () => {
     try {
       setLoading(true);
-      const [allProfiles, currentProfile] = await Promise.all([
-        getLocalProfiles(),
-        getActiveLocalProfile(),
-      ]);
+      const allProfiles = await getLocalProfiles();
+      const currentProfile = await getActiveLocalProfile(allProfiles);
       setProfiles(allProfiles);
       setActiveProfile(currentProfile);
 
@@ -175,33 +173,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push("/login");
   }, [router]);
 
-  const session: SessionUser | null = activeProfile
-    ? {
-        id: activeProfile.id,
-        name: activeProfile.name,
-        email: activeProfile.email,
-      }
-    : null;
+  const session: SessionUser | null = useMemo(
+    () =>
+      activeProfile
+        ? {
+            id: activeProfile.id,
+            name: activeProfile.name,
+            email: activeProfile.email,
+          }
+        : null,
+    [activeProfile]
+  );
+
+  const activeEvent = useMemo(() => events[0] || null, [events]);
+
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      session,
+      user: activeProfile,
+      profiles,
+      activeProfile,
+      activeEvent,
+      loading,
+      events,
+      loadingEvents,
+      refreshSession,
+      refreshEvents,
+      switchProfile,
+      createProfile,
+      removeProfile,
+      logout,
+    }),
+    [
+      session,
+      activeProfile,
+      profiles,
+      activeEvent,
+      loading,
+      events,
+      loadingEvents,
+      refreshSession,
+      refreshEvents,
+      switchProfile,
+      createProfile,
+      removeProfile,
+      logout,
+    ]
+  );
 
   return (
-    <AuthContext.Provider
-      value={{
-        session,
-        user: activeProfile,
-        profiles,
-        activeProfile,
-        activeEvent: events[0] || null,
-        loading,
-        events,
-        loadingEvents,
-        refreshSession,
-        refreshEvents,
-        switchProfile,
-        createProfile,
-        removeProfile,
-        logout,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

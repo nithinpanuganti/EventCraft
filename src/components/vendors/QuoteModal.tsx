@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Modal } from "@/components/ui/Modal";
 
 interface QuoteModalProps {
   isOpen: boolean;
@@ -75,102 +76,89 @@ export function QuoteModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-950/30 backdrop-blur-md animate-fade-in">
-      <div className="glass-surface-elevated specular-top w-full max-w-md rounded-2xl p-6 shadow-glass-elevated">
-        <div className="flex items-center justify-between pb-3 border-b border-surface-100">
-          <div>
-            <h3 className="text-base font-semibold text-surface-900">Record Vendor Quotation</h3>
-            <p className="text-xs text-surface-500">{vendorName}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-surface-400 hover:text-surface-700 text-sm font-semibold p-1"
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Record Vendor Quotation"
+      description={`Log formal pricing proposals and contracts for ${vendorName}.`}
+      maxWidth="md"
+      footer={
+        <div className="flex items-center justify-end gap-2.5">
+          <Button type="button" variant="ghost" size="sm" onClick={onClose} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={handleSubmit}
+            isLoading={isSubmitting}
+            className="shadow-glass font-medium"
           >
-            ✕
-          </button>
+            Record Quotation
+          </Button>
+        </div>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-4 pt-1">
+        {error && (
+          <div className="p-3 rounded-xl bg-danger-50/90 border border-danger-200/80 text-danger-800 text-xs shadow-glass-subtle">
+            {error}
+          </div>
+        )}
+
+        <Input
+          label="Package / Service Description"
+          required
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="e.g. Standard 8-Hour Coverage + 2 Photographers"
+          disabled={isSubmitting}
+        />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <Input
+            label={`Quoted Amount (${currency})`}
+            required
+            type="number"
+            step="0.01"
+            min="0.01"
+            value={quotedAmount}
+            onChange={(e) => setQuotedAmount(e.target.value)}
+            placeholder="0.00"
+            disabled={isSubmitting}
+          />
+
+          <Input
+            label="Valid Until / Expiration"
+            type="date"
+            value={validUntil}
+            onChange={(e) => setValidUntil(e.target.value)}
+            disabled={isSubmitting}
+          />
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-3.5 pt-3.5 text-xs">
-          {error && (
-            <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-800">
-              {error}
-            </div>
-          )}
+        <Input
+          label="Document URL / Proposal Link"
+          type="url"
+          value={quoteDocumentUrl}
+          onChange={(e) => setQuoteDocumentUrl(e.target.value)}
+          placeholder="https://drive.google.com/..."
+          disabled={isSubmitting}
+        />
 
-          <div>
-            <label className="block font-medium text-surface-700 mb-1">
-              Package / Service Description *
-            </label>
-            <Input
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="e.g. Standard 8-Hour Coverage + 2 Photographers"
-              required
-              disabled={isSubmitting}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block font-medium text-surface-700 mb-1">
-                Quoted Amount ({currency}) *
-              </label>
-              <Input
-                type="number"
-                step="0.01"
-                min="0.01"
-                value={quotedAmount}
-                onChange={(e) => setQuotedAmount(e.target.value)}
-                placeholder="0.00"
-                required
-                disabled={isSubmitting}
-              />
-            </div>
-
-            <div>
-              <label className="block font-medium text-surface-700 mb-1">Valid Until / Expiration</label>
-              <Input
-                type="date"
-                value={validUntil}
-                onChange={(e) => setValidUntil(e.target.value)}
-                disabled={isSubmitting}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block font-medium text-surface-700 mb-1">
-              Document URL / Quote Link
-            </label>
-            <Input
-              type="url"
-              value={quoteDocumentUrl}
-              onChange={(e) => setQuoteDocumentUrl(e.target.value)}
-              placeholder="https://drive.google.com/..."
-              disabled={isSubmitting}
-            />
-          </div>
-
-          <label className="flex items-center gap-2 p-2 rounded-lg bg-surface-50 border border-surface-200 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={isSelected}
-              onChange={(e) => setIsSelected(e.target.checked)}
-              className="rounded border-surface-300 text-primary-600 focus:ring-primary-500"
-            />
-            <span className="text-surface-700 font-medium">Mark as currently selected / shortlisted quote</span>
-          </label>
-
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-surface-100">
-            <Button type="button" variant="ghost" size="sm" onClick={onClose} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button type="submit" size="sm" disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : "Record Quotation"}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <label className="flex items-center gap-2.5 p-3 rounded-xl glass-surface-subtle border border-surface-200/80 cursor-pointer shadow-glass-subtle">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={(e) => setIsSelected(e.target.checked)}
+            className="rounded border-surface-300 text-primary-600 focus:ring-primary-500"
+          />
+          <span className="text-surface-800 font-semibold text-xs">
+            Mark as currently selected / shortlisted quote
+          </span>
+        </label>
+      </form>
+    </Modal>
   );
 }

@@ -24,7 +24,7 @@ export default function MyEventsPage() {
         description="View and manage your saved weddings, birthday celebrations, and community gatherings."
         actions={
           <Link href="/events/new">
-            <Button className="gap-2">
+            <Button className="gap-2 shadow-glass font-medium">
               <PlusCircle className="h-4 w-4" />
               <span>Create New Event</span>
             </Button>
@@ -34,9 +34,9 @@ export default function MyEventsPage() {
 
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Skeleton className="h-44 rounded-xl" />
-          <Skeleton className="h-44 rounded-xl" />
-          <Skeleton className="h-44 rounded-xl" />
+          <Skeleton className="h-48 rounded-2xl" />
+          <Skeleton className="h-48 rounded-2xl" />
+          <Skeleton className="h-48 rounded-2xl" />
         </div>
       ) : isUnauthenticated ? (
         <EmptyState
@@ -58,7 +58,7 @@ export default function MyEventsPage() {
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {events.map((event) => (
             <Card key={event.id} hoverable className="flex flex-col justify-between">
-              <div className="space-y-3">
+              <div className="space-y-3.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Badge variant="primary" size="sm">
@@ -83,35 +83,35 @@ export default function MyEventsPage() {
                   )}
                 </div>
 
-                <div className="flex items-center gap-4 text-xs text-surface-600 border-t border-surface-100 pt-3">
+                <div className="flex items-center gap-4 text-xs text-surface-600 border-t border-surface-200/50 pt-3">
                   <div className="flex items-center gap-1.5">
                     <Users className="h-3.5 w-3.5 text-surface-400" />
                     <span>{event.guestCount} guests</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <DollarSign className="h-3.5 w-3.5 text-surface-400" />
-                    <span className="font-semibold text-surface-800">
+                    <span className="font-bold text-surface-800">
                       {formatCurrency(Number(event.totalBudget), event.currency)}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-4 border-t border-surface-100 pt-3 flex items-center justify-between">
+              <div className="mt-4 border-t border-surface-200/50 pt-3 flex items-center justify-between">
                 <span className="text-[11px] text-surface-400">
                   Updated {formatDate(event.updatedAt)}
                 </span>
                 <div className="flex items-center gap-2">
                   <Link
                     href={`/events/new?resumeId=${event.id}`}
-                    className="inline-flex items-center text-xs font-semibold text-surface-600 hover:text-surface-900"
+                    className="inline-flex items-center text-xs font-semibold text-surface-600 hover:text-surface-900 transition-colors"
                   >
-                    <span>Resume Planning</span>
+                    <span>Edit</span>
                   </Link>
                   <span className="text-surface-300">•</span>
                   <Link
                     href={`/planner`}
-                    className="inline-flex items-center text-xs font-semibold text-primary-600 hover:text-primary-700"
+                    className="inline-flex items-center text-xs font-semibold text-primary-600 hover:text-primary-700 transition-colors"
                   >
                     <span>Open Planner</span>
                     <ArrowRight className="ml-1 h-3.5 w-3.5" />

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
+import { Modal } from "@/components/ui/Modal";
 import { type TaskWithDependencies } from "@/lib/storage/types";
 import { TaskPhase, TaskPriority, TaskStatus } from "@/lib/storage/types";
 
@@ -90,158 +91,142 @@ export function TaskModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-950/40 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl border border-surface-200">
-        <div className="flex items-center justify-between pb-3 border-b border-surface-100">
-          <h3 className="text-base font-semibold text-surface-900">
-            {initialTask ? "Edit Actionable Task" : "Create Actionable Task"}
-          </h3>
-          <button
-            onClick={onClose}
-            className="text-surface-400 hover:text-surface-700 text-sm font-semibold p-1"
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={initialTask ? "Edit Actionable Task" : "Create Actionable Task"}
+      description="Define milestones, dependencies, due dates, and assignments."
+      maxWidth="lg"
+      footer={
+        <div className="flex items-center justify-end gap-2.5">
+          <Button type="button" variant="ghost" size="sm" onClick={onClose} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={handleSubmit}
+            isLoading={isSubmitting}
+            className="shadow-glass font-medium"
           >
-            ✕
-          </button>
+            {initialTask ? "Update Task" : "Create Task"}
+          </Button>
+        </div>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-4 pt-1">
+        {error && (
+          <div className="p-3 rounded-xl bg-danger-50/90 border border-danger-200/80 text-danger-800 text-xs shadow-glass-subtle">
+            {error}
+          </div>
+        )}
+
+        <Input
+          label="Task Title"
+          required
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="e.g. Confirm floral arrangement delivery window"
+          disabled={isSubmitting}
+        />
+
+        <Textarea
+          label="Description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={2}
+          placeholder="Key specifications, phone numbers, or checklist items..."
+          disabled={isSubmitting}
+        />
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Select
+            label="Execution Phase"
+            value={phase}
+            onChange={(e) => setPhase(e.target.value as TaskPhase)}
+            disabled={isSubmitting}
+            options={[
+              { value: "PLANNING", label: "1. Planning" },
+              { value: "BOOKING", label: "2. Booking" },
+              { value: "PREPARATION", label: "3. Preparation" },
+              { value: "EVENT_DAY", label: "4. Event Day" },
+              { value: "POST_EVENT", label: "5. Post Event" },
+            ]}
+          />
+
+          <Select
+            label="Priority"
+            value={priority}
+            onChange={(e) => setPriority(e.target.value as TaskPriority)}
+            disabled={isSubmitting}
+            options={[
+              { value: "LOW", label: "Low" },
+              { value: "MEDIUM", label: "Medium" },
+              { value: "HIGH", label: "High" },
+              { value: "CRITICAL", label: "Critical" },
+            ]}
+          />
+
+          <Select
+            label="Initial Status"
+            value={status}
+            onChange={(e) => setStatus(e.target.value as TaskStatus)}
+            disabled={isSubmitting}
+            options={[
+              { value: "TODO", label: "To Do" },
+              { value: "IN_PROGRESS", label: "In Progress" },
+              { value: "BLOCKED", label: "Blocked" },
+              { value: "COMPLETED", label: "Completed" },
+              { value: "CANCELLED", label: "Cancelled" },
+            ]}
+          />
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-3.5 pt-3.5 text-xs">
-          {error && (
-            <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-800">
-              {error}
-            </div>
-          )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <Input
+            label="Due Date"
+            type="date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+            disabled={isSubmitting}
+          />
 
-          <div>
-            <label className="block font-medium text-surface-700 mb-1">Task Title *</label>
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Confirm floral arrangement delivery window"
-              required
-              disabled={isSubmitting}
-            />
-          </div>
+          <Input
+            label="Assigned Role / Person"
+            value={assignedTo}
+            onChange={(e) => setAssignedTo(e.target.value)}
+            placeholder="e.g. Lead Coordinator, Decor Lead"
+            disabled={isSubmitting}
+          />
+        </div>
 
-          <div>
-            <label className="block font-medium text-surface-700 mb-1">Description</label>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={2}
-              placeholder="Key specifications, phone numbers, or checklist items..."
-              disabled={isSubmitting}
-            />
-          </div>
-
-          <div className="grid grid-cols-3 gap-2.5">
-            <div>
-              <Select
-                label="Execution Phase"
-                value={phase}
-                onChange={(e) => setPhase(e.target.value as TaskPhase)}
-                disabled={isSubmitting}
-                options={[
-                  { value: "PLANNING", label: "1. Planning" },
-                  { value: "BOOKING", label: "2. Booking" },
-                  { value: "PREPARATION", label: "3. Preparation" },
-                  { value: "EVENT_DAY", label: "4. Event Day" },
-                  { value: "POST_EVENT", label: "5. Post Event" },
-                ]}
-              />
-            </div>
-
-            <div>
-              <Select
-                label="Priority"
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as TaskPriority)}
-                disabled={isSubmitting}
-                options={[
-                  { value: "LOW", label: "Low" },
-                  { value: "MEDIUM", label: "Medium" },
-                  { value: "HIGH", label: "High" },
-                  { value: "CRITICAL", label: "Critical" },
-                ]}
-              />
-            </div>
-
-            <div>
-              <Select
-                label="Initial Status"
-                value={status}
-                onChange={(e) => setStatus(e.target.value as TaskStatus)}
-                disabled={isSubmitting}
-                options={[
-                  { value: "TODO", label: "To Do" },
-                  { value: "IN_PROGRESS", label: "In Progress" },
-                  { value: "BLOCKED", label: "Blocked" },
-                  { value: "COMPLETED", label: "Completed" },
-                  { value: "CANCELLED", label: "Cancelled" },
-                ]}
-              />
+        {/* Task Prerequisites Selection in Glass Container */}
+        {validPrereqCandidates.length > 0 && (
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-surface-700">
+              Prerequisites (Must be completed first)
+            </label>
+            <div className="max-h-32 overflow-y-auto rounded-xl border border-surface-200/80 glass-surface-subtle p-2 space-y-1 shadow-glass-subtle">
+              {validPrereqCandidates.map((t) => (
+                <label
+                  key={t.id}
+                  className="flex items-center gap-2 text-xs text-surface-800 hover:bg-white/70 p-1.5 rounded-lg cursor-pointer transition-colors"
+                >
+                  <input
+                    type="checkbox"
+                    checked={prerequisiteTaskIds.includes(t.id)}
+                    onChange={() => togglePrerequisite(t.id)}
+                    className="rounded border-surface-300 text-primary-600 focus:ring-primary-500"
+                  />
+                  <span className="truncate font-medium">{t.title}</span>
+                  <span className="text-[10px] text-surface-400 ml-auto font-mono">({t.phase})</span>
+                </label>
+              ))}
             </div>
           </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block font-medium text-surface-700 mb-1">Due Date</label>
-              <Input
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                disabled={isSubmitting}
-              />
-            </div>
-
-            <div>
-              <label className="block font-medium text-surface-700 mb-1">
-                Assigned Role / Person
-              </label>
-              <Input
-                value={assignedTo}
-                onChange={(e) => setAssignedTo(e.target.value)}
-                placeholder="e.g. Lead Coordinator, Decor Lead"
-                disabled={isSubmitting}
-              />
-            </div>
-          </div>
-
-          {/* Task Prerequisites Selection */}
-          {validPrereqCandidates.length > 0 && (
-            <div>
-              <label className="block font-medium text-surface-700 mb-1">
-                Prerequisites (Must be completed first)
-              </label>
-              <div className="max-h-28 overflow-y-auto rounded-lg border border-surface-200 bg-surface-50 p-2 space-y-1">
-                {validPrereqCandidates.map((t) => (
-                  <label
-                    key={t.id}
-                    className="flex items-center gap-2 text-[11px] text-surface-800 hover:bg-surface-100/60 p-1 rounded cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={prerequisiteTaskIds.includes(t.id)}
-                      onChange={() => togglePrerequisite(t.id)}
-                      className="rounded border-surface-300 text-primary-600 focus:ring-primary-500"
-                    />
-                    <span className="truncate">{t.title}</span>
-                    <span className="text-[10px] text-surface-400 ml-auto">({t.phase})</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-surface-100">
-            <Button type="button" variant="ghost" size="sm" onClick={onClose} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button type="submit" size="sm" disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : initialTask ? "Update Task" : "Create Task"}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+        )}
+      </form>
+    </Modal>
   );
 }

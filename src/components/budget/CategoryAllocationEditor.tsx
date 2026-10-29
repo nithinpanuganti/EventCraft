@@ -74,23 +74,23 @@ export function CategoryAllocationEditor({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* Live Financial Header Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 bg-surface-50 border border-surface-200 rounded-xl text-xs">
+      {/* Live Financial Header Metrics in Glass Surface */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-xl glass-surface-subtle border border-surface-200/80 text-xs shadow-glass-subtle">
         <div>
-          <span className="text-surface-500 block">Total Event Budget</span>
-          <span className="text-sm font-bold text-surface-900">{formatMoney(totalBudget, currency)}</span>
+          <span className="text-surface-500 block font-medium">Total Event Budget</span>
+          <span className="text-sm font-bold font-mono text-surface-900">{formatMoney(totalBudget, currency)}</span>
         </div>
         <div>
-          <span className="text-surface-500 block">Proposed Allocated</span>
-          <span className={`text-sm font-bold ${isOverBudget ? "text-rose-600" : "text-surface-900"}`}>
+          <span className="text-surface-500 block font-medium">Proposed Allocated</span>
+          <span className={`text-sm font-bold font-mono ${isOverBudget ? "text-danger-600" : "text-surface-900"}`}>
             {formatMoney(proposedTotal, currency)}
           </span>
         </div>
         <div>
-          <span className="text-surface-500 block">
+          <span className="text-surface-500 block font-medium">
             {isOverBudget ? "Exceeded Budget By" : "Remaining Unallocated"}
           </span>
-          <span className={`text-sm font-bold ${isOverBudget ? "text-rose-600" : "text-emerald-600"}`}>
+          <span className={`text-sm font-bold font-mono ${isOverBudget ? "text-danger-600" : "text-emerald-600"}`}>
             {isOverBudget ? `+${formatMoney(overAmount, currency)}` : formatMoney(unallocated, currency)}
           </span>
         </div>
@@ -98,8 +98,8 @@ export function CategoryAllocationEditor({
 
       {/* Over budget banner */}
       {isOverBudget && (
-        <div className="flex items-center gap-2.5 p-3 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-800">
-          <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
+        <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-danger-50/90 border border-danger-200/80 text-xs text-danger-800 shadow-glass-subtle backdrop-blur-sm">
+          <AlertCircle className="h-4 w-4 shrink-0 text-danger-600" />
           <span>
             Allocations exceed your total budget by <strong>{formatMoney(overAmount, currency)}</strong>. Please decrease one or more category allocations.
           </span>
@@ -107,13 +107,13 @@ export function CategoryAllocationEditor({
       )}
 
       {error && (
-        <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-800">
+        <div className="p-3.5 rounded-xl bg-danger-50/90 border border-danger-200/80 text-xs text-danger-800 shadow-glass-subtle backdrop-blur-sm">
           {error}
         </div>
       )}
 
       {/* Category input rows */}
-      <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+      <div className="space-y-2.5 max-h-96 overflow-y-auto pr-1">
         {categories.map((cat) => {
           const val = allocations[cat.id] ?? 0;
           const pct = totalBudget > 0 ? ((val / totalBudget) * 100).toFixed(1) : "0";
@@ -122,77 +122,80 @@ export function CategoryAllocationEditor({
           return (
             <div
               key={cat.id}
-              className="flex items-center justify-between gap-4 p-3 rounded-lg border border-surface-200 bg-surface-50/50 hover:bg-surface-50 transition-colors"
+              className="flex items-center justify-between gap-4 p-3.5 rounded-xl border border-surface-200/70 glass-surface-subtle hover:bg-white/70 transition-colors shadow-glass-subtle"
             >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-surface-900 truncate">{cat.name}</span>
+                  <span className="text-sm font-semibold text-surface-900 truncate">{cat.name}</span>
                   {hasExpenses && (
-                    <Badge variant="outline" className="text-[10px] py-0 px-1.5 text-surface-500">
-                      Spent: {formatMoney(cat.totalActualSpent, currency)}
+                    <Badge variant="secondary" size="sm">
+                      {formatMoney(cat.totalActualSpent, currency)} spent
                     </Badge>
                   )}
                 </div>
-                <span className="text-[11px] text-surface-500">
-                  {pct}% of event budget
-                </span>
+                <div className="text-[11px] text-surface-500 mt-0.5">
+                  Represents {pct}% of overall target budget
+                </div>
               </div>
 
-              <div className="w-36">
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={allocations[cat.id] ?? ""}
-                  onChange={(e) => handleChange(cat.id, e.target.value)}
-                  disabled={isSaving}
-                  className="h-8 text-right font-mono text-xs"
-                />
+              <div className="flex items-center gap-2 w-48 shrink-0">
+                <div className="relative flex-1">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={val === 0 ? "" : val}
+                    onChange={(e) => handleChange(cat.id, e.target.value)}
+                    placeholder="0.00"
+                    disabled={isSaving}
+                    className="h-8 text-xs font-mono text-right pr-2"
+                  />
+                </div>
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Action Footer */}
-      <div className="flex items-center justify-end gap-2 pt-3 border-t border-surface-100">
+      {/* Actions */}
+      <div className="flex items-center justify-between pt-3 border-t border-surface-200/60">
         <Button
           type="button"
-          variant="outline"
+          variant="ghost"
           size="sm"
           onClick={handleReset}
           disabled={isSaving}
-          className="gap-1.5"
+          className="gap-1.5 text-xs text-surface-500 hover:text-surface-800"
         >
           <RotateCcw className="h-3.5 w-3.5" />
-          <span>Reset</span>
+          <span>Reset to Saved</span>
         </Button>
-        {onCancel && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onCancel}
-            disabled={isSaving}
-          >
-            Cancel
-          </Button>
-        )}
-        <Button
-          type="submit"
-          size="sm"
-          disabled={isSaving || isOverBudget}
-          className="gap-1.5"
-        >
-          {isSaving ? (
-            <span>Saving...</span>
-          ) : (
-            <>
-              <Save className="h-3.5 w-3.5" />
-              <span>Save Allocations</span>
-            </>
+
+        <div className="flex items-center gap-2">
+          {onCancel && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onCancel}
+              disabled={isSaving}
+              className="text-xs"
+            >
+              Cancel
+            </Button>
           )}
-        </Button>
+          <Button
+            type="submit"
+            variant="primary"
+            size="sm"
+            isLoading={isSaving}
+            disabled={isOverBudget}
+            className="gap-1.5 text-xs font-semibold shadow-glass"
+          >
+            <Save className="h-3.5 w-3.5" />
+            <span>Save Allocations</span>
+          </Button>
+        </div>
       </div>
     </form>
   );

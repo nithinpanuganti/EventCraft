@@ -56,23 +56,27 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-[80vh] items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="flex min-h-[82vh] items-center justify-center py-12 px-4 sm:px-6 lg:px-8 animate-page-enter">
       <div className="w-full max-w-md space-y-6">
-        <div className="text-center space-y-2">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 text-white shadow-[0_4px_14px_rgba(124,58,237,0.35),inset_0_1px_1px_rgba(255,255,255,0.4)]">
-            <UserCheck className="h-6 w-6" />
+        <div className="text-center space-y-3">
+          <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-500 via-primary-600 to-indigo-700 text-white shadow-glass-glow border border-white/30">
+            <UserCheck className="h-7 w-7" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-surface-900">Create Local Profile</h1>
-          <p className="text-sm text-surface-500">
-            Set up a local planner profile on this device. All data is persisted directly in browser IndexedDB.
-          </p>
+          <div className="space-y-1">
+            <h1 className="text-2xl font-bold tracking-tight text-surface-900">Create Local Profile</h1>
+            <p className="text-xs sm:text-sm text-surface-500 max-w-sm mx-auto">
+              Set up a local planner profile on this device. All data is persisted directly in your browser&apos;s IndexedDB.
+            </p>
+          </div>
         </div>
 
         {/* Local Architecture Transparency Notice */}
-        <div className="rounded-xl p-3 bg-primary-50/70 border border-primary-200/60 text-xs text-primary-900 flex items-start gap-2.5">
-          <HardDrive className="h-4 w-4 text-primary-600 mt-0.5 shrink-0" />
+        <div className="glass-surface-subtle rounded-2xl p-4 border border-primary-500/20 bg-primary-500/5 text-xs text-surface-700 flex items-start gap-3 shadow-glass-subtle">
+          <div className="h-6 w-6 rounded-lg bg-primary-500/10 border border-primary-500/20 flex items-center justify-center text-primary-600 dark:text-primary-400 shrink-0 mt-0.5">
+            <HardDrive className="h-3.5 w-3.5" />
+          </div>
           <div>
-            <span className="font-semibold">Local-Only Browser Storage:</span> Your profiles, events, and budgets stay on this computer. No remote servers or cloud accounts are used.
+            <span className="font-semibold text-surface-900">Local-Only Browser Storage:</span> Your profiles, events, and budgets stay on this computer. No remote servers or cloud accounts are used.
           </div>
         </div>
 
@@ -85,7 +89,7 @@ export default function RegisterPage() {
           />
         )}
 
-        <Card className="p-6 sm:p-8 glass-surface-elevated shadow-glass-elevated specular-top">
+        <Card variant="elevated" className="p-6 sm:p-8 specular-top">
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
               label="Planner Name"
@@ -106,7 +110,7 @@ export default function RegisterPage() {
               value={formData.email}
               onChange={handleChange}
               error={errors.email}
-              helperText="Used to identify your plans in this browser."
+              helperText="Used to identify your plans on this browser."
             />
 
             <Button
@@ -120,7 +124,7 @@ export default function RegisterPage() {
             </Button>
           </form>
 
-          <div className="mt-6 border-t border-surface-200/80 pt-4 text-center">
+          <div className="mt-6 border-t border-surface-200/50 dark:border-surface-800/50 pt-4 text-center">
             <p className="text-xs text-surface-500">
               Already have a local profile on this browser?{" "}
               <Link href="/login" className="font-semibold text-primary-600 hover:text-primary-700 underline underline-offset-2">
@@ -131,7 +135,7 @@ export default function RegisterPage() {
         </Card>
 
         <div className="flex items-center justify-center gap-1.5 text-xs text-surface-400">
-          <ShieldCheck className="h-3.5 w-3.5" />
+          <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
           <span>Zero external tracking • No cloud database required</span>
         </div>
       </div>

@@ -27,10 +27,10 @@ export function ToastNotification({
   const Icon = icons[type];
 
   const typeStyles = {
-    success: "bg-success-50/90 border-success-500/30 text-success-900 shadow-glass backdrop-blur-md",
-    warning: "bg-warning-50/90 border-warning-500/30 text-warning-900 shadow-glass backdrop-blur-md",
-    error: "bg-danger-50/90 border-danger-500/30 text-danger-900 shadow-glass backdrop-blur-md",
-    info: "bg-white/90 border-primary-500/30 text-surface-900 shadow-glass backdrop-blur-md",
+    success: "bg-success-50/90 border-success-500/35 text-success-900 shadow-glass-elevated backdrop-blur-md",
+    warning: "bg-warning-50/90 border-warning-500/35 text-warning-900 shadow-glass-elevated backdrop-blur-md",
+    error: "bg-danger-50/90 border-danger-500/35 text-danger-900 shadow-glass-elevated backdrop-blur-md",
+    info: "bg-white/92 border-primary-500/35 text-surface-900 shadow-glass-elevated backdrop-blur-md",
   };
 
   const iconColors = {
@@ -44,21 +44,24 @@ export function ToastNotification({
     <div
       role="status"
       className={cn(
-        "flex w-full items-start gap-3 rounded-2xl border p-4 transition-all duration-150 specular-top",
+        "relative flex w-full items-start gap-3 rounded-2xl border p-4 transition-all duration-200 overflow-hidden",
         typeStyles[type],
         className
       )}
     >
+      {/* Specular top highlight */}
+      <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/95 to-transparent pointer-events-none" />
+
       <Icon className={cn("mt-0.5 h-5 w-5 shrink-0", iconColors[type])} />
       <div className="flex-1">
-        <h4 className="text-sm font-semibold tracking-tight">{title}</h4>
+        <h4 className="text-sm font-bold tracking-tight">{title}</h4>
         {message && <p className="mt-0.5 text-xs opacity-90 leading-normal">{message}</p>}
       </div>
       {onDismiss && (
         <button
           type="button"
           onClick={onDismiss}
-          className="rounded-lg p-1 text-surface-400 hover:bg-black/5 hover:text-surface-700 focus:outline-none transition-colors"
+          className="rounded-xl p-1 text-surface-400 hover:bg-black/5 hover:text-surface-700 focus:outline-none transition-colors border border-transparent hover:border-black/5"
           aria-label="Dismiss alert"
         >
           <X className="h-4 w-4" />

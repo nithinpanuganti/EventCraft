@@ -30,9 +30,9 @@ export function QuoteComparisonTable({
 
   if (allQuotes.length === 0) {
     return (
-      <div className="flex h-36 flex-col items-center justify-center rounded-xl border border-dashed border-surface-200 bg-surface-50 text-xs text-surface-500">
-        <p>No vendor quotations logged yet.</p>
-        <p className="mt-0.5 text-[11px] text-surface-400">
+      <div className="flex h-36 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-surface-300/70 glass-surface-subtle text-xs text-surface-500 shadow-glass-subtle">
+        <p className="font-semibold text-surface-700">No vendor quotations logged yet.</p>
+        <p className="mt-1 text-[11px] text-surface-400">
           Add quotes to your vendors to enable side-by-side pricing comparisons.
         </p>
       </div>
@@ -49,19 +49,19 @@ export function QuoteComparisonTable({
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-surface-200/70 bg-white/40 backdrop-blur-md shadow-glass">
+    <div className="glass-table-wrapper">
       <table className="w-full text-left text-xs">
-        <thead className="bg-white/70 backdrop-blur-md text-surface-700 font-semibold border-b border-surface-200/60">
+        <thead className="glass-table-thead text-surface-700 font-semibold border-b border-surface-200/70">
           <tr>
-            <th className="py-2.5 px-3">Vendor & Category</th>
-            <th className="py-2.5 px-3">Package / Scope</th>
-            <th className="py-2.5 px-3 text-right">Quoted Amount</th>
-            <th className="py-2.5 px-3">Valid Until</th>
-            <th className="py-2.5 px-3 text-center">Status</th>
-            <th className="py-2.5 px-3 text-right">Selection Action</th>
+            <th className="py-3 px-3.5">Vendor & Category</th>
+            <th className="py-3 px-3.5">Package / Scope</th>
+            <th className="py-3 px-3.5 text-right">Quoted Amount</th>
+            <th className="py-3 px-3.5">Valid Until</th>
+            <th className="py-3 px-3.5 text-center">Status</th>
+            <th className="py-3 px-3.5 text-right">Selection Action</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-surface-100">
+        <tbody className="divide-y divide-surface-200/50">
           {allQuotes.map((q) => {
             const isLowest = lowestByCategory.get(q.vendorCategory) === q.quotedAmount;
             const isExpired =
@@ -71,14 +71,14 @@ export function QuoteComparisonTable({
               <tr
                 key={q.id}
                 className={`transition-colors ${
-                  q.isSelected ? "bg-emerald-50/50" : "hover:bg-primary-50/20"
+                  q.isSelected ? "bg-emerald-50/50" : "hover:bg-white/60"
                 }`}
               >
-                <td className="py-3 px-3">
-                  <div className="font-semibold text-surface-900">{q.vendorName}</div>
-                  <div className="text-[11px] text-surface-500">{q.vendorCategory}</div>
+                <td className="py-3.5 px-3.5">
+                  <div className="font-bold text-surface-900">{q.vendorName}</div>
+                  <div className="text-[11px] text-surface-500 font-medium">{q.vendorCategory}</div>
                 </td>
-                <td className="py-3 px-3 font-medium text-surface-800">
+                <td className="py-3.5 px-3.5 font-medium text-surface-800">
                   <div>{q.description}</div>
                   {q.quoteDocumentUrl && (
                     <a
@@ -92,49 +92,49 @@ export function QuoteComparisonTable({
                     </a>
                   )}
                 </td>
-                <td className="py-3 px-3 text-right font-mono font-bold text-surface-900">
+                <td className="py-3.5 px-3.5 text-right font-mono font-bold text-surface-900">
                   <div>{formatMoney(q.quotedAmount, q.currency)}</div>
                   {isLowest && (
-                    <span className="text-[10px] text-emerald-600 font-normal">
+                    <span className="text-[10px] text-emerald-600 font-semibold block">
                       Lowest in category
                     </span>
                   )}
                 </td>
-                <td className="py-3 px-3 text-surface-500 text-[11px]">
+                <td className="py-3.5 px-3.5 text-surface-500 text-[11px]">
                   {q.validUntil ? (
-                    <span className={`flex items-center gap-1 ${isExpired ? "text-rose-600" : ""}`}>
+                    <span className={`flex items-center gap-1 ${isExpired ? "text-danger-600 font-semibold" : ""}`}>
                       <Calendar className="h-3 w-3" />
                       <span>{new Date(q.validUntil).toLocaleDateString()}</span>
-                      {isExpired && <span className="font-semibold">(Expired)</span>}
+                      {isExpired && <span>(Expired)</span>}
                     </span>
                   ) : (
                     "—"
                   )}
                 </td>
-                <td className="py-3 px-3 text-center">
+                <td className="py-3.5 px-3.5 text-center">
                   {q.isSelected ? (
-                    <Badge variant="success" className="text-[10px] gap-1">
+                    <Badge variant="success" size="sm" className="gap-1">
                       <CheckCircle2 className="h-3 w-3" />
-                      <span>Selected Offer</span>
+                      <span>Selected</span>
                     </Badge>
                   ) : (
-                    <Badge variant="secondary" className="text-[10px]">
+                    <Badge variant="secondary" size="sm">
                       Alternative
                     </Badge>
                   )}
                 </td>
-                <td className="py-3 px-3 text-right">
+                <td className="py-3.5 px-3.5 text-right">
                   {q.isSelected ? (
-                    <span className="text-emerald-700 font-semibold text-[11px]">Active</span>
+                    <span className="text-emerald-700 font-bold text-xs">Active</span>
                   ) : (
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => onSelectQuote(q.id)}
-                      className="h-7 text-[11px] px-2.5 gap-1 text-primary-700 border-primary-200 hover:bg-primary-50"
+                      className="h-7 text-[11px] px-2.5 gap-1 text-primary-700 border-primary-200/80 hover:bg-primary-50 shadow-glass-subtle font-semibold"
                     >
                       <Check className="h-3 w-3" />
-                      <span>Select This Offer</span>
+                      <span>Select Offer</span>
                     </Button>
                   )}
                 </td>

@@ -7,10 +7,15 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
+import dynamic from "next/dynamic";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Tabs } from "@/components/ui/Tabs";
-import { TaskModal } from "@/components/timeline/TaskModal";
 import { TaskCard } from "@/components/timeline/TaskCard";
+
+const TaskModal = dynamic(
+  () => import("@/components/timeline/TaskModal").then((mod) => mod.TaskModal),
+  { ssr: false }
+);
 import { RunSheetViewer, type DayOfActivity } from "@/components/timeline/RunSheetViewer";
 import { type TaskWithDependencies } from "@/lib/storage/types";
 import { CanonicalTaskStatus } from "@/lib/timeline/task-state-machine";
@@ -104,40 +109,57 @@ function TimelineContent() {
     }
   }, [user?.id, activeEvent?.id]);
 
-  // Load tasks & schedule for selected event
-  const loadTasksAndSchedule = useCallback(async (eventId: string) => {
+  useEffect(() => {
+    loadEvents();
+  }, [loadEvents]);
+
+  // Load tasks with prerequisites and run-of-show schedule for selected event
+  const loadTasksAndSchedule = useCallback(async (evId: string) => {
     try {
       setLoadingTasks(true);
       setError(null);
 
       const [tasksData, runSheet] = await Promise.all([
-        getLocalTasksWithDependencies(eventId),
-        getLocalRunSheet(eventId),
+        getLocalTasksWithDependencies(evId),
+        getLocalRunSheet(evId),
       ]);
 
       setTasks(tasksData.tasks);
       setStatusCounts(tasksData.statusCounts);
-      setSchedule(runSheet as DayOfActivity[]);
+      setSchedule(runSheet || []);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to load timeline tasks.";
-      setError(msg);
+      console.error(err);
+      setError(err instanceof Error ? err.message : "Failed to load tasks and schedule.");
       setTasks([]);
+      setSchedule([]);
     } finally {
       setLoadingTasks(false);
     }
   }, []);
 
   useEffect(() => {
-    loadEvents();
-  }, [loadEvents]);
-
-  useEffect(() => {
     if (selectedEventId) {
       loadTasksAndSchedule(selectedEventId);
+    } else {
+      setTasks([]);
+      setSchedule([]);
     }
   }, [selectedEventId, loadTasksAndSchedule]);
 
-  // Save task (create or update)
+  // Handle status update
+  const handleStatusChange = async (taskId: string, targetStatus: CanonicalTaskStatus) => {
+    if (!selectedEventId) return;
+
+    try {
+      await updateLocalTaskStatus(taskId, targetStatus as TaskStatus);
+      await loadTasksAndSchedule(selectedEventId);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Status transition failed.";
+      alert(msg);
+    }
+  };
+
+  // Create or update task
   const handleSaveTask = async (data: {
     title: string;
     description?: string | null;
@@ -157,9 +179,9 @@ function TimelineContent() {
         phase: data.phase,
         priority: data.priority,
         status: data.status,
-        dueDate: data.dueDate || null,
-        assignedTo: data.assignedTo || null,
-        prerequisiteIds: data.prerequisiteTaskIds || [],
+        dueDate: data.dueDate,
+        assignedTo: data.assignedTo,
+        prerequisiteIds: data.prerequisiteTaskIds,
       });
     } else {
       await createLocalTask({
@@ -168,26 +190,14 @@ function TimelineContent() {
         description: data.description || undefined,
         phase: data.phase,
         priority: data.priority,
-        dueDate: data.dueDate || null,
-        prerequisiteIds: data.prerequisiteTaskIds || [],
+        dueDate: data.dueDate,
+        assignedTo: data.assignedTo,
+        prerequisiteIds: data.prerequisiteTaskIds,
       });
     }
 
     await loadTasksAndSchedule(selectedEventId);
     setEditingTask(null);
-  };
-
-  // Change task status via state machine
-  const handleStatusChange = async (taskId: string, targetStatus: CanonicalTaskStatus) => {
-    if (!selectedEventId) return;
-
-    try {
-      await updateLocalTaskStatus(taskId, targetStatus);
-      await loadTasksAndSchedule(selectedEventId);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to update task status.";
-      alert(msg);
-    }
   };
 
   // Delete task
@@ -282,8 +292,8 @@ function TimelineContent() {
           description="Execution phases, dependency blocking, milestone deadlines, and coordinator schedules."
         />
 
-        <div className="flex items-center gap-2 self-start md:self-auto">
-          <Calendar className="h-4 w-4 text-surface-500" />
+        <div className="flex items-center gap-2 self-start md:self-auto rounded-2xl glass-card px-3.5 py-2 shadow-glass-subtle">
+          <Calendar className="h-4 w-4 text-primary-600" />
           <select
             value={selectedEventId || ""}
             onChange={(e) => {
@@ -292,10 +302,10 @@ function TimelineContent() {
                 setSelectedEventId(id);
               });
             }}
-            className="rounded-lg border border-surface-300 bg-white px-3 py-1.5 text-xs font-medium text-surface-800 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            className="glass-input rounded-xl px-3 py-1.5 text-xs font-semibold text-surface-800 shadow-glass-subtle cursor-pointer focus:outline-none"
           >
             {events.map((evt) => (
-              <option key={evt.id} value={evt.id}>
+              <option key={evt.id} value={evt.id} className="bg-white text-surface-900">
                 {evt.title} ({evt.type})
               </option>
             ))}
@@ -310,7 +320,7 @@ function TimelineContent() {
       )}
 
       {error && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs text-rose-800">
+        <div className="rounded-2xl border border-danger-200/80 bg-danger-50/80 backdrop-blur-md p-4 text-xs text-danger-800 shadow-glass">
           {error}
         </div>
       )}
@@ -319,61 +329,69 @@ function TimelineContent() {
         <>
           {/* Key Metric Stat Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card className="p-4 border-surface-200">
-              <div className="flex items-center justify-between text-surface-500 mb-1">
-                <span className="text-xs font-medium">Overall Progress</span>
-                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            <Card hoverable className="p-4">
+              <div className="flex items-center justify-between text-surface-500 mb-2">
+                <span className="text-xs font-bold uppercase tracking-wider">Overall Progress</span>
+                <div className="p-1.5 rounded-lg bg-emerald-100/80 text-emerald-600">
+                  <CheckCircle2 className="h-4 w-4" />
+                </div>
               </div>
-              <div className="text-xl font-bold text-surface-900">{completionPercent}%</div>
-              <div className="text-[11px] text-surface-500 mt-1">
+              <div className="text-xl sm:text-2xl font-extrabold font-mono text-surface-900">{completionPercent}%</div>
+              <div className="text-[11px] text-surface-500 mt-1 font-medium">
                 {completedTasks} of {totalTasks} tasks completed
               </div>
             </Card>
 
-            <Card className="p-4 border-surface-200">
-              <div className="flex items-center justify-between text-surface-500 mb-1">
-                <span className="text-xs font-medium">Active Tasks</span>
-                <Clock className="h-4 w-4 text-primary-600" />
+            <Card hoverable className="p-4">
+              <div className="flex items-center justify-between text-surface-500 mb-2">
+                <span className="text-xs font-bold uppercase tracking-wider">Active Tasks</span>
+                <div className="p-1.5 rounded-lg bg-primary-100/80 text-primary-600">
+                  <Clock className="h-4 w-4" />
+                </div>
               </div>
-              <div className="text-xl font-bold text-primary-700">
+              <div className="text-xl sm:text-2xl font-extrabold font-mono text-primary-700">
                 {(statusCounts.IN_PROGRESS || 0) + (statusCounts.TODO || 0)}
               </div>
-              <div className="text-[11px] text-surface-500 mt-1">
+              <div className="text-[11px] text-surface-500 mt-1 font-medium">
                 {statusCounts.IN_PROGRESS || 0} in progress, {statusCounts.TODO || 0} to do
               </div>
             </Card>
 
-            <Card className="p-4 border-surface-200">
-              <div className="flex items-center justify-between text-surface-500 mb-1">
-                <span className="text-xs font-medium">Blocked Tasks</span>
-                <AlertOctagon className="h-4 w-4 text-amber-600" />
+            <Card hoverable className="p-4">
+              <div className="flex items-center justify-between text-surface-500 mb-2">
+                <span className="text-xs font-bold uppercase tracking-wider">Blocked Tasks</span>
+                <div className="p-1.5 rounded-lg bg-amber-100/80 text-amber-600">
+                  <AlertOctagon className="h-4 w-4" />
+                </div>
               </div>
-              <div className="text-xl font-bold text-amber-700">
+              <div className="text-xl sm:text-2xl font-extrabold font-mono text-amber-700">
                 {tasks.filter((t) => t.isBlockedByPrerequisites || t.status === "BLOCKED").length}
               </div>
-              <div className="text-[11px] text-surface-500 mt-1">
+              <div className="text-[11px] text-surface-500 mt-1 font-medium">
                 Awaiting prerequisite completion
               </div>
             </Card>
 
-            <Card className="p-4 border-surface-200">
-              <div className="flex items-center justify-between text-surface-500 mb-1">
-                <span className="text-xs font-medium">Event Date Target</span>
-                <Calendar className="h-4 w-4 text-indigo-600" />
+            <Card hoverable className="p-4">
+              <div className="flex items-center justify-between text-surface-500 mb-2">
+                <span className="text-xs font-bold uppercase tracking-wider">Target Date</span>
+                <div className="p-1.5 rounded-lg bg-indigo-100/80 text-indigo-600">
+                  <Calendar className="h-4 w-4" />
+                </div>
               </div>
-              <div className="text-sm font-bold text-surface-900 mt-1">
+              <div className="text-sm sm:text-base font-extrabold text-surface-900 mt-1 truncate">
                 {selectedEvent.eventDate
                   ? new Date(selectedEvent.eventDate).toLocaleDateString()
                   : "Date Unconfirmed"}
               </div>
-              <div className="text-[11px] text-surface-500 mt-1">
+              <div className="text-[11px] text-surface-500 mt-1 font-medium">
                 {selectedEvent.eventDate ? "Anchor for milestones" : "Relative timeline active"}
               </div>
             </Card>
           </div>
 
           {/* Main Workspace Tabs Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-surface-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-surface-200/60">
             <Tabs
               activeTab={activeTab}
               onChange={setActiveTab}
@@ -390,7 +408,7 @@ function TimelineContent() {
                 setEditingTask(null);
                 setIsTaskModalOpen(true);
               }}
-              className="gap-1.5 text-xs self-start sm:self-auto"
+              className="gap-1.5 text-xs self-start sm:self-auto shadow-glass font-medium"
             >
               <PlusCircle className="h-3.5 w-3.5" />
               <span>Create Task</span>
@@ -399,7 +417,7 @@ function TimelineContent() {
 
           {/* TAB 1: EXECUTION PHASES */}
           {activeTab === "phases" && (
-            <div className="space-y-6 pt-2">
+            <div className="space-y-6 pt-2 animate-page-enter">
               <div className="space-y-6">
                 {PHASES.map((p) => {
                   const phaseTasks = tasks.filter((t) => t.phase === p.key);
@@ -407,12 +425,12 @@ function TimelineContent() {
                   const phasePct = phaseTasks.length > 0 ? Math.round((doneCount / phaseTasks.length) * 100) : 0;
 
                   return (
-                    <Card key={p.key} className="p-5 border-surface-200">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 mb-4 border-b border-surface-100">
+                    <Card key={p.key} className="p-5 sm:p-6">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 mb-4 border-b border-surface-200/60">
                         <div>
                           <div className="flex items-center gap-2">
-                            <h3 className="text-sm font-semibold text-surface-900">{p.label}</h3>
-                            <Badge variant="outline" className="text-[10px]">
+                            <h3 className="text-sm font-bold text-surface-900">{p.label}</h3>
+                            <Badge variant="outline" size="sm">
                               {doneCount}/{phaseTasks.length} Done ({phasePct}%)
                             </Badge>
                           </div>
@@ -421,11 +439,11 @@ function TimelineContent() {
                       </div>
 
                       {phaseTasks.length === 0 ? (
-                        <div className="text-xs text-surface-400 py-3 text-center border border-dashed rounded-lg bg-surface-50/50">
+                        <div className="text-xs text-surface-400 py-6 text-center border-2 border-dashed border-surface-200/80 rounded-2xl glass-surface-subtle shadow-glass-subtle">
                           No tasks assigned to this phase.
                         </div>
                       ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                           {phaseTasks.map((task) => (
                             <TaskCard
                               key={task.id}
@@ -449,15 +467,15 @@ function TimelineContent() {
 
           {/* TAB 2: INTERACTIVE CHECKLIST */}
           {activeTab === "checklist" && (
-            <div className="space-y-4 pt-2">
-              {/* Filter controls */}
-              <div className="flex flex-wrap items-center gap-3 p-3 bg-surface-50 border border-surface-200 rounded-xl text-xs">
-                <span className="font-semibold text-surface-700">Filter by:</span>
+            <div className="space-y-4 pt-2 animate-page-enter">
+              {/* Filter controls in Glass Surface */}
+              <div className="flex flex-wrap items-center gap-3 p-3.5 glass-surface-subtle border border-surface-200/80 rounded-2xl text-xs shadow-glass-subtle">
+                <span className="font-bold text-surface-700">Filter by:</span>
 
                 <select
                   value={selectedPhase}
                   onChange={(e) => setSelectedPhase(e.target.value as TaskPhase | "ALL")}
-                  className="rounded border border-surface-300 bg-white px-2.5 py-1 text-xs text-surface-800"
+                  className="glass-input rounded-xl px-3 py-1.5 text-xs text-surface-800 font-medium cursor-pointer"
                 >
                   <option value="ALL">All Phases</option>
                   <option value="PLANNING">1. Planning</option>
@@ -470,7 +488,7 @@ function TimelineContent() {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="rounded border border-surface-300 bg-white px-2.5 py-1 text-xs text-surface-800"
+                  className="glass-input rounded-xl px-3 py-1.5 text-xs text-surface-800 font-medium cursor-pointer"
                 >
                   <option value="ALL">All Statuses</option>
                   <option value="TODO">To Do</option>
@@ -480,7 +498,7 @@ function TimelineContent() {
                   <option value="CANCELLED">Cancelled</option>
                 </select>
 
-                <span className="ml-auto text-surface-500 text-[11px]">
+                <span className="ml-auto text-surface-500 text-[11px] font-medium">
                   Showing {filteredTasks.length} of {tasks.length} tasks
                 </span>
               </div>
@@ -497,7 +515,7 @@ function TimelineContent() {
                   }}
                 />
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                   {filteredTasks.map((task) => (
                     <TaskCard
                       key={task.id}
@@ -517,31 +535,31 @@ function TimelineContent() {
 
           {/* TAB 3: RUN-OF-SHOW SCHEDULE */}
           {activeTab === "runsheet" && (
-            <div className="pt-2">
-              <Card className="p-5 border-surface-200">
-                <RunSheetViewer
-                  schedule={schedule}
-                  eventTitle={selectedEvent.title}
-                  eventDate={selectedEvent.eventDate}
-                  onSaveSchedule={handleSaveSchedule}
-                />
-              </Card>
-            </div>
+            <Card className="p-5 sm:p-6 animate-page-enter">
+              <RunSheetViewer
+                schedule={schedule}
+                eventTitle={selectedEvent.title}
+                eventDate={selectedEvent.eventDate}
+                onSaveSchedule={handleSaveSchedule}
+              />
+            </Card>
           )}
         </>
       )}
 
-      {/* Task Creation / Edit Modal */}
-      <TaskModal
-        isOpen={isTaskModalOpen}
-        onClose={() => {
-          setIsTaskModalOpen(false);
-          setEditingTask(null);
-        }}
-        initialTask={editingTask}
-        availableTasks={tasks}
-        onSave={handleSaveTask}
-      />
+      {/* Task Modal */}
+      {selectedEvent && (
+        <TaskModal
+          isOpen={isTaskModalOpen}
+          onClose={() => {
+            setIsTaskModalOpen(false);
+            setEditingTask(null);
+          }}
+          initialTask={editingTask}
+          availableTasks={tasks}
+          onSave={handleSaveTask}
+        />
+      )}
     </div>
   );
 }

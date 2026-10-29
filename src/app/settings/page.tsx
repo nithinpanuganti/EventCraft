@@ -133,16 +133,16 @@ export default function SettingsPage() {
 
       {statusMessage && (
         <div
-          className={`flex items-start gap-3 rounded-xl p-4 text-xs shadow-sm border ${
+          className={`flex items-start gap-3 rounded-2xl p-4 text-xs shadow-glass-subtle border backdrop-blur-md transition-all ${
             statusMessage.type === "success"
-              ? "border-emerald-500/20 bg-emerald-50/80 text-emerald-900"
-              : "border-rose-500/20 bg-rose-50/80 text-rose-900"
+              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-950 dark:text-emerald-200"
+              : "border-rose-500/30 bg-rose-500/10 text-rose-950 dark:text-rose-200"
           }`}
         >
           {statusMessage.type === "success" ? (
-            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 mt-0.5" />
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400 mt-0.5" />
           ) : (
-            <AlertTriangle className="h-4 w-4 shrink-0 text-rose-600 mt-0.5" />
+            <AlertTriangle className="h-4 w-4 shrink-0 text-rose-600 dark:text-rose-400 mt-0.5" />
           )}
           <span className="font-medium">{statusMessage.text}</span>
         </div>
@@ -150,11 +150,13 @@ export default function SettingsPage() {
 
       <div className="grid gap-6">
         {/* Active Local Profile */}
-        <Card>
+        <Card variant="elevated" className="specular-top">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-surface-900">
-                <User className="h-4 w-4 text-primary-600" />
+              <div className="flex items-center gap-2.5 text-surface-900">
+                <div className="h-8 w-8 rounded-xl bg-primary-500/10 border border-primary-500/20 flex items-center justify-center text-primary-600 dark:text-primary-400">
+                  <User className="h-4 w-4" />
+                </div>
                 <CardTitle>Active Browser Profile</CardTitle>
               </div>
               <Badge variant="primary">Local Only</Badge>
@@ -165,36 +167,42 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-4 text-sm text-surface-700">
             {user ? (
-              <div className="rounded-xl border border-surface-200 bg-surface-50/70 p-4 space-y-2">
+              <div className="glass-surface-subtle rounded-2xl border border-white/60 dark:border-white/10 p-5 space-y-2.5 shadow-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-surface-500">Profile Name</span>
+                  <span className="text-xs text-surface-500 font-medium">Profile Name</span>
                   <span className="font-semibold text-surface-900">{user.name}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-surface-500">Local Identifier</span>
-                  <span className="font-mono text-xs text-surface-700">{user.email}</span>
+                  <span className="text-xs text-surface-500 font-medium">Local Identifier</span>
+                  <span className="font-mono text-xs text-surface-700 bg-surface-100/60 dark:bg-surface-800/60 px-2 py-0.5 rounded-md border border-white/20">
+                    {user.email}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-surface-500">Created On</span>
+                  <span className="text-xs text-surface-500 font-medium">Created On</span>
                   <span className="text-xs text-surface-600">
-                    {new Date(user.createdAt).toLocaleDateString()}
+                    {new Date(user.createdAt).toLocaleDateString(undefined, {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
                   </span>
                 </div>
               </div>
             ) : (
-              <div className="rounded-xl border border-dashed border-surface-300 p-4 text-xs text-surface-500 text-center">
+              <div className="rounded-2xl border border-dashed border-surface-300 dark:border-surface-700 p-5 text-xs text-surface-500 text-center">
                 No active profile loaded.
               </div>
             )}
 
-            <div className="flex flex-wrap gap-2 pt-1">
+            <div className="flex flex-wrap gap-2.5 pt-1">
               <Link href="/login">
                 <Button variant="secondary" size="sm">
                   Switch Profile
                 </Button>
               </Link>
               <Link href="/register">
-                <Button variant="secondary" size="sm">
+                <Button variant="outline" size="sm">
                   Create New Profile
                 </Button>
               </Link>
@@ -203,11 +211,13 @@ export default function SettingsPage() {
         </Card>
 
         {/* Local Storage & Backup Management */}
-        <Card>
+        <Card variant="elevated" className="specular-top">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-surface-900">
-                <Database className="h-4 w-4 text-primary-600" />
+              <div className="flex items-center gap-2.5 text-surface-900">
+                <div className="h-8 w-8 rounded-xl bg-primary-500/10 border border-primary-500/20 flex items-center justify-center text-primary-600 dark:text-primary-400">
+                  <Database className="h-4 w-4" />
+                </div>
                 <CardTitle>IndexedDB Backup & Restore</CardTitle>
               </div>
               <Badge variant="success">Versioned JSON Schema</Badge>
@@ -217,15 +227,15 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Export */}
-              <div className="rounded-xl border border-surface-200/80 bg-white/50 p-4 flex flex-col justify-between">
+              <div className="glass-surface-subtle rounded-2xl border border-white/60 dark:border-white/10 p-5 flex flex-col justify-between hover:border-primary-500/40 hover:shadow-glass-hover transition-all">
                 <div>
-                  <h4 className="text-xs font-semibold text-surface-900 flex items-center gap-1.5 mb-1">
-                    <Download className="h-3.5 w-3.5 text-primary-600" />
+                  <h4 className="text-xs font-semibold text-surface-900 flex items-center gap-1.5 mb-1.5">
+                    <Download className="h-3.5 w-3.5 text-primary-600 dark:text-primary-400" />
                     Export Local Data
                   </h4>
-                  <p className="text-[11px] text-surface-500 mb-3">
+                  <p className="text-[11px] text-surface-500 leading-relaxed mb-4">
                     Downloads a complete backup JSON file containing all profiles, events, plans, tasks, vendors, and expenses.
                   </p>
                 </div>
@@ -234,20 +244,20 @@ export default function SettingsPage() {
                   size="sm"
                   onClick={handleExportBackup}
                   disabled={exporting}
-                  className="w-full"
+                  className="w-full shadow-glass-subtle"
                 >
                   {exporting ? "Generating Backup..." : "Export Backup (.json)"}
                 </Button>
               </div>
 
               {/* Import */}
-              <div className="rounded-xl border border-surface-200/80 bg-white/50 p-4 flex flex-col justify-between">
+              <div className="glass-surface-subtle rounded-2xl border border-white/60 dark:border-white/10 p-5 flex flex-col justify-between hover:border-primary-500/40 hover:shadow-glass-hover transition-all">
                 <div>
-                  <h4 className="text-xs font-semibold text-surface-900 flex items-center gap-1.5 mb-1">
-                    <Upload className="h-3.5 w-3.5 text-primary-600" />
+                  <h4 className="text-xs font-semibold text-surface-900 flex items-center gap-1.5 mb-1.5">
+                    <Upload className="h-3.5 w-3.5 text-primary-600 dark:text-primary-400" />
                     Restore From Backup
                   </h4>
-                  <p className="text-[11px] text-surface-500 mb-3">
+                  <p className="text-[11px] text-surface-500 leading-relaxed mb-4">
                     Restores event plans and ledgers from a valid EventCraft backup JSON file into this browser.
                   </p>
                 </div>
@@ -274,18 +284,18 @@ export default function SettingsPage() {
             </div>
 
             {/* Clear Database Danger Zone */}
-            <div className="pt-2 border-t border-surface-100 flex items-center justify-between">
+            <div className="pt-4 border-t border-surface-200/50 dark:border-surface-800/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <span className="text-xs font-medium text-surface-800">Clear Local Database</span>
-                <p className="text-[11px] text-surface-400">
-                  Wipes all IndexedDB object stores on this browser.
+                <span className="text-xs font-semibold text-surface-800">Clear Local Database</span>
+                <p className="text-[11px] text-surface-500">
+                  Wipes all IndexedDB object stores on this browser. This action cannot be undone.
                 </p>
               </div>
               <Button
                 variant="destructive"
                 size="sm"
                 onClick={handleResetData}
-                className="flex items-center gap-1.5"
+                className="flex items-center gap-1.5 shrink-0"
               >
                 <Trash2 className="h-3.5 w-3.5" />
                 Reset All Data
@@ -294,60 +304,73 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Architecture & Zero-API Status */}
-        <Card>
+        {/* Architecture & Local Runtime Status */}
+        <Card variant="elevated" className="specular-top">
           <CardHeader>
-            <div className="flex items-center gap-2 text-surface-900">
-              <Cpu className="h-4 w-4 text-primary-600" />
-              <CardTitle>Architecture & Zero-API Status</CardTitle>
+            <div className="flex items-center gap-2.5 text-surface-900">
+              <div className="h-8 w-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                <Cpu className="h-4 w-4" />
+              </div>
+              <CardTitle>Architecture & Local Runtime Status</CardTitle>
             </div>
             <CardDescription>
               Runtime verification that application logic operates exclusively in the browser.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-surface-700">
-            <div className="flex items-center justify-between py-2 border-b border-surface-100">
-              <span className="font-medium">Architecture Mode</span>
-              <Badge variant="success">Zero-API Local-Only (Active)</Badge>
+            <div className="flex items-center justify-between py-2.5 border-b border-surface-200/40 dark:border-surface-800/40">
+              <span className="font-medium text-surface-800">Architecture Mode</span>
+              <Badge variant="success">Browser-Local Standalone (Active)</Badge>
             </div>
-            <div className="flex items-center justify-between py-2 border-b border-surface-100">
-              <span className="font-medium">Persistence Engine</span>
+            <div className="flex items-center justify-between py-2.5 border-b border-surface-200/40 dark:border-surface-800/40">
+              <span className="font-medium text-surface-800">Persistence Engine</span>
               <Badge variant="primary">Browser IndexedDB (eventcraft_local_db v1)</Badge>
             </div>
-            <div className="flex items-center justify-between py-2 border-b border-surface-100">
-              <span className="font-medium">Planning & Rules Engine</span>
-              <Badge variant="success">Deterministic Rule Engine (No Cloud AI APIs)</Badge>
+            <div className="flex items-center justify-between py-2.5 border-b border-surface-200/40 dark:border-surface-800/40">
+              <span className="font-medium text-surface-800">Planning & Rules Engine</span>
+              <Badge variant="success">Deterministic Rule Engine (No External Cloud Services)</Badge>
             </div>
-            <div className="flex items-center justify-between py-2 border-b border-surface-100">
-              <span className="font-medium">Conversational Assistant</span>
+            <div className="flex items-center justify-between py-2.5 border-b border-surface-200/40 dark:border-surface-800/40">
+              <span className="font-medium text-surface-800">Conversational Assistant</span>
               <Badge variant="primary">Deterministic Command Interpreter</Badge>
             </div>
-            <div className="flex items-center justify-between py-2">
-              <span className="font-medium">Runtime Network APIs</span>
+            <div className="flex items-center justify-between py-2.5">
+              <span className="font-medium text-surface-800">External Network Calls</span>
               <Badge variant="success">0 HTTP / Backend Requests</Badge>
             </div>
           </CardContent>
         </Card>
 
         {/* Security & Privacy Directives */}
-        <Card>
+        <Card variant="subtle" className="border-emerald-500/20">
           <CardHeader>
-            <div className="flex items-center gap-2 text-surface-900">
-              <Shield className="h-4 w-4 text-success-600" />
-              <CardTitle>Security & Privacy Limitations</CardTitle>
+            <div className="flex items-center gap-2.5 text-surface-900">
+              <div className="h-8 w-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                <Shield className="h-4 w-4" />
+              </div>
+              <CardTitle>Security & Privacy Transparency</CardTitle>
             </div>
             <CardDescription>Explicit transparency regarding browser-local execution.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2.5 text-xs text-surface-600 leading-relaxed">
-            <p className="flex items-start gap-2">
-              <span className="font-semibold text-surface-800">&bull; Local Data Boundary:</span> All event details, budgets, tasks, and vendors exist solely within this browser&apos;s IndexedDB storage.
-            </p>
-            <p className="flex items-start gap-2">
-              <span className="font-semibold text-surface-800">&bull; No Multi-User Security Isolation:</span> Browser profiles are convenience workspaces for organizing plans. Any user with administrative access to this computer or browser developer tools can inspect the IndexedDB data.
-            </p>
-            <p className="flex items-start gap-2">
-              <span className="font-semibold text-surface-800">&bull; Zero External Network Exposure:</span> No passwords, financial records, guest counts, or event schedules are transmitted to external servers, cloud databases, or third-party AI endpoints.
-            </p>
+          <CardContent className="space-y-3 text-xs text-surface-600 leading-relaxed">
+            <div className="glass-surface-subtle p-3.5 rounded-xl border border-white/50 dark:border-white/10 flex items-start gap-2.5">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
+              <p>
+                <strong className="text-surface-900">Local Data Boundary:</strong> All event details, budgets, tasks, and vendors exist solely within this browser&apos;s IndexedDB storage.
+              </p>
+            </div>
+            <div className="glass-surface-subtle p-3.5 rounded-xl border border-white/50 dark:border-white/10 flex items-start gap-2.5">
+              <span className="h-2 w-2 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+              <p>
+                <strong className="text-surface-900">No Multi-User Security Isolation:</strong> Browser profiles are convenience workspaces for organizing plans. Any user with administrative access to this computer or browser developer tools can inspect the IndexedDB data.
+              </p>
+            </div>
+            <div className="glass-surface-subtle p-3.5 rounded-xl border border-white/50 dark:border-white/10 flex items-start gap-2.5">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
+              <p>
+                <strong className="text-surface-900">Zero External Network Exposure:</strong> No passwords, financial records, guest counts, or event schedules are transmitted to external servers, cloud databases, or third-party cloud services.
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>

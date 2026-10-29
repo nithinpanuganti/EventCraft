@@ -4,7 +4,8 @@
   "private": true,
   "description": "Local-First Browser-Native Event Planning Assistant for Weddings, Birthdays, and Community Events",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbopack",
+    "dev:webpack": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

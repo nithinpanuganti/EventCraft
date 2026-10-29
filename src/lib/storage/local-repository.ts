@@ -24,13 +24,7 @@ import {
   TaskWithDependencies,
   VendorWithQuotes,
 } from "./types";
-import { generateLocalPlan } from "../local-planning/rule-engine";
-import {
-  validateTaskTransition,
-  checkDependencyBlocking,
-  CanonicalTaskStatus,
-} from "../timeline/task-state-machine";
-
+import type { CanonicalTaskStatus } from "../timeline/task-state-machine";
 
 const ACTIVE_PROFILE_KEY = "eventcraft_active_profile_id";
 const ACTIVE_EVENT_KEY = "eventcraft_active_event_id";
@@ -66,8 +60,8 @@ export async function getLocalProfiles(): Promise<LocalProfile[]> {
   return profiles;
 }
 
-export async function getActiveLocalProfile(): Promise<LocalProfile> {
-  const profiles = await getLocalProfiles();
+export async function getActiveLocalProfile(cachedProfiles?: LocalProfile[]): Promise<LocalProfile> {
+  const profiles = cachedProfiles && cachedProfiles.length > 0 ? cachedProfiles : await getLocalProfiles();
   let activeId: string | null = memoryActiveProfileId;
 
   if (typeof window !== "undefined" && window.localStorage) {
@@ -326,6 +320,7 @@ export async function generateAndSaveLocalPlan(eventId: string): Promise<LocalEv
   if (!event) throw new Error("Event not found");
 
   // Generate deterministic plan via local rule engine
+  const { generateLocalPlan } = await import("../local-planning/rule-engine");
   const generated = generateLocalPlan({
     eventId: event.id,
     title: event.title,
@@ -628,6 +623,8 @@ export async function getLocalTasksWithDependencies(eventId: string): Promise<{
     CANCELLED: 0,
   };
 
+  const { checkDependencyBlocking } = await import("../timeline/task-state-machine");
+
   const tasksWithDeps: TaskWithDependencies[] = tasks.map((t) => {
     phaseCounts[t.phase] = (phaseCounts[t.phase] || 0) + 1;
     statusCounts[t.status] = (statusCounts[t.status] || 0) + 1;
@@ -671,6 +668,7 @@ export async function updateLocalTaskStatus(
   const existing = await dbGet<LocalTask>("tasks", taskId);
   if (!existing) throw new Error("Task not found");
 
+  const { validateTaskTransition } = await import("../timeline/task-state-machine");
   const validation = validateTaskTransition(existing.status as CanonicalTaskStatus, targetStatus);
   if (!validation.isValid) {
     throw new Error(validation.errorMessage || "Invalid status transition");

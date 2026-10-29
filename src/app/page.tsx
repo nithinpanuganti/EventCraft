@@ -4,6 +4,9 @@ import {
   ArrowRight,
   ShieldCheck,
   Calculator,
+  HeartHandshake,
+  Cake,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardTitle, CardDescription } from "@/components/ui/Card";
@@ -12,11 +15,16 @@ import { Badge } from "@/components/ui/Badge";
 export default function HomePage() {
   return (
     <div className="space-y-12 py-4 animate-page-enter">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden rounded-3xl border border-surface-200/80 glass-surface-elevated p-8 sm:p-12 shadow-glass-elevated specular-top">
-        <div className="max-w-3xl space-y-5">
+      {/* Hero Section with Layered Glass Depth */}
+      <section className="relative overflow-hidden rounded-3xl border border-white/80 glass-surface-elevated p-8 sm:p-12 shadow-glass-elevated">
+        <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/95 to-transparent pointer-events-none" />
+        
+        {/* Subtle internal refraction glow */}
+        <div className="absolute -top-24 -right-24 h-64 w-64 rounded-full bg-primary-400/10 blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 max-w-3xl space-y-6">
           <Badge variant="primary" size="md">
-            <Sparkles className="h-3.5 w-3.5" />
+            <Sparkles className="h-3.5 w-3.5 text-primary-600" />
             <span>Next-Generation Event Architecture</span>
           </Badge>
 
@@ -27,18 +35,18 @@ export default function HomePage() {
           <p className="text-base text-surface-600 sm:text-lg leading-relaxed">
             EventCraft AI bridges generative event design with deterministic financial and milestone
             management. Generate concepts, strict budget allocations, and day-of schedules in one
-            unified workspace.
+            unified liquid-glass workspace.
           </p>
 
           <div className="flex flex-wrap items-center gap-4 pt-2">
             <Link href="/events/new">
-              <Button size="lg" className="shadow-glass gap-2">
+              <Button size="lg" className="shadow-glass gap-2 font-semibold">
                 <span>Start Planning an Event</span>
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
             <Link href="/dashboard">
-              <Button variant="outline" size="lg">
+              <Button variant="outline" size="lg" className="font-semibold">
                 <span>Open Dashboard</span>
               </Button>
             </Link>
@@ -49,7 +57,7 @@ export default function HomePage() {
       {/* Core Architectural Pillars */}
       <section className="space-y-6">
         <div className="space-y-1 text-center sm:text-left">
-          <h2 className="text-xl font-bold tracking-tight text-surface-900 sm:text-2xl">
+          <h2 className="text-xl font-extrabold tracking-tight text-surface-900 sm:text-2xl">
             Built for Actionable Execution, Not Just Chat
           </h2>
           <p className="text-sm text-surface-500">
@@ -58,8 +66,8 @@ export default function HomePage() {
         </div>
 
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          <Card hoverable className="space-y-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-50/90 text-primary-700 border border-primary-200/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-sm">
+          <Card hoverable className="space-y-3.5">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-primary-50 to-primary-100/90 text-primary-600 border border-primary-200/80 shadow-[inset_0_1px_1.5px_rgba(255,255,255,1),0_2px_8px_rgba(124,58,237,0.12)] backdrop-blur-md">
               <Sparkles className="h-5 w-5" />
             </div>
             <CardTitle className="text-base">Structured GenAI Planning</CardTitle>
@@ -69,8 +77,8 @@ export default function HomePage() {
             </CardDescription>
           </Card>
 
-          <Card hoverable className="space-y-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-50/90 text-accent-700 border border-accent-200/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-sm">
+          <Card hoverable className="space-y-3.5">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-accent-50 to-accent-100/90 text-accent-700 border border-accent-200/80 shadow-[inset_0_1px_1.5px_rgba(255,255,255,1),0_2px_8px_rgba(99,102,241,0.12)] backdrop-blur-md">
               <Calculator className="h-5 w-5" />
             </div>
             <CardTitle className="text-base">Deterministic Ledger</CardTitle>
@@ -80,8 +88,8 @@ export default function HomePage() {
             </CardDescription>
           </Card>
 
-          <Card hoverable className="space-y-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-100/90 text-surface-800 border border-surface-200/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-sm">
+          <Card hoverable className="space-y-3.5">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-surface-100 to-surface-200/80 text-surface-800 border border-surface-200/90 shadow-[inset_0_1px_1.5px_rgba(255,255,255,1),0_2px_8px_rgba(0,0,0,0.04)] backdrop-blur-md">
               <ShieldCheck className="h-5 w-5" />
             </div>
             <CardTitle className="text-base">Resilient & Safe Architecture</CardTitle>
@@ -94,28 +102,47 @@ export default function HomePage() {
       </section>
 
       {/* Supported Event Categories */}
-      <section className="glass-card p-6 sm:p-8 rounded-2xl specular-top">
+      <section className="glass-card p-6 sm:p-8 rounded-3xl relative overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/90 to-transparent pointer-events-none" />
+
         <h3 className="text-lg font-bold tracking-tight text-surface-900">Supported Event Profiles</h3>
         <p className="mt-1 text-xs sm:text-sm text-surface-500">
           Tailored planning templates and questions configured for each event type.
         </p>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          <div className="rounded-xl border border-surface-200/70 bg-white/70 backdrop-blur-sm p-4 shadow-subtle">
-            <div className="text-sm font-bold text-surface-900">Weddings</div>
-            <p className="mt-1 text-xs text-surface-600 leading-normal">
+          <div className="glass-surface-subtle p-5 rounded-2xl border border-surface-200/70 shadow-glass-subtle space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-primary-100/80 text-primary-700">
+                <HeartHandshake className="h-4 w-4" />
+              </div>
+              <div className="text-sm font-bold text-surface-900">Weddings</div>
+            </div>
+            <p className="text-xs text-surface-600 leading-relaxed">
               12-month timeline, ceremony vs. reception schedule, vendor quotes, seating benchmarks.
             </p>
           </div>
-          <div className="rounded-xl border border-surface-200/70 bg-white/70 backdrop-blur-sm p-4 shadow-subtle">
-            <div className="text-sm font-bold text-surface-900">Birthdays & Anniversaries</div>
-            <p className="mt-1 text-xs text-surface-600 leading-normal">
+
+          <div className="glass-surface-subtle p-5 rounded-2xl border border-surface-200/70 shadow-glass-subtle space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-accent-100/80 text-accent-700">
+                <Cake className="h-4 w-4" />
+              </div>
+              <div className="text-sm font-bold text-surface-900">Birthdays & Anniversaries</div>
+            </div>
+            <p className="text-xs text-surface-600 leading-relaxed">
               Activity coordination, party themes, affordable catering splits, entertainment booking.
             </p>
           </div>
-          <div className="rounded-xl border border-surface-200/70 bg-white/70 backdrop-blur-sm p-4 shadow-subtle">
-            <div className="text-sm font-bold text-surface-900">Community Gatherings</div>
-            <p className="mt-1 text-xs text-surface-600 leading-normal">
+
+          <div className="glass-surface-subtle p-5 rounded-2xl border border-surface-200/70 shadow-glass-subtle space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-surface-200/80 text-surface-800">
+                <Users className="h-4 w-4" />
+              </div>
+              <div className="text-sm font-bold text-surface-900">Community Gatherings</div>
+            </div>
+            <p className="text-xs text-surface-600 leading-relaxed">
               Permits, volunteer task delegation, accessibility ramps, sponsor budgets, safety run sheets.
             </p>
           </div>

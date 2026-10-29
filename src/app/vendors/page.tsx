@@ -7,10 +7,18 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
+import dynamic from "next/dynamic";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Tabs } from "@/components/ui/Tabs";
-import { VendorModal } from "@/components/vendors/VendorModal";
-import { QuoteModal } from "@/components/vendors/QuoteModal";
+
+const VendorModal = dynamic(
+  () => import("@/components/vendors/VendorModal").then((mod) => mod.VendorModal),
+  { ssr: false }
+);
+const QuoteModal = dynamic(
+  () => import("@/components/vendors/QuoteModal").then((mod) => mod.QuoteModal),
+  { ssr: false }
+);
 import { QuoteComparisonTable } from "@/components/vendors/QuoteComparisonTable";
 import { formatMoney } from "@/lib/budget/financial-engine";
 import { type VendorWithQuotes, VendorStatus } from "@/lib/storage/types";
@@ -94,34 +102,38 @@ function VendorsContent() {
     }
   }, [user?.id, activeEvent?.id]);
 
-  // Load vendors for selected event
-  const loadVendors = useCallback(async (eventId: string) => {
+  useEffect(() => {
+    loadEvents();
+  }, [loadEvents]);
+
+  // Load vendors and distinct categories for selected event
+  const loadVendors = useCallback(async (evId: string) => {
     try {
       setLoadingVendors(true);
       setError(null);
-      const { vendors: vList, categories: cList } = await getLocalVendorsAndCategories(eventId);
-      setVendors(vList);
-      setCategories(cList);
+      const result = await getLocalVendorsAndCategories(evId);
+      setVendors(result.vendors);
+      setCategories(result.categories);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to load vendors.";
-      setError(msg);
+      console.error(err);
+      setError("Failed to load vendor directory.");
       setVendors([]);
+      setCategories([]);
     } finally {
       setLoadingVendors(false);
     }
   }, []);
 
   useEffect(() => {
-    loadEvents();
-  }, [loadEvents]);
-
-  useEffect(() => {
     if (selectedEventId) {
       loadVendors(selectedEventId);
+    } else {
+      setVendors([]);
+      setCategories([]);
     }
   }, [selectedEventId, loadVendors]);
 
-  // Save vendor (create or update)
+  // Create or update vendor
   const handleSaveVendor = async (data: {
     categoryName: string;
     companyName: string;
@@ -134,28 +146,25 @@ function VendorsContent() {
   }) => {
     if (!selectedEventId) return;
 
-    try {
-      if (editingVendor) {
-        await updateLocalVendor(editingVendor.id, data);
-      } else {
-        await createLocalVendor({
-          eventId: selectedEventId,
-          ...data,
-        });
-      }
-
-      await loadVendors(selectedEventId);
-      setEditingVendor(null);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to save vendor.";
-      throw new Error(msg);
+    if (editingVendor) {
+      await updateLocalVendor(editingVendor.id, data);
+    } else {
+      await createLocalVendor({
+        eventId: selectedEventId,
+        ...data,
+      });
     }
+
+    await loadVendors(selectedEventId);
+    setEditingVendor(null);
   };
 
   // Delete vendor
-  const handleDeleteVendor = async (vendorId: string, name: string) => {
+  const handleDeleteVendor = async (vendorId: string, companyName: string) => {
     if (!selectedEventId) return;
-    if (!confirm(`Are you sure you want to delete vendor "${name}" and all their quotes?`)) return;
+    if (!confirm(`Are you sure you want to delete vendor "${companyName}"? All associated quotations will also be deleted.`)) {
+      return;
+    }
 
     try {
       await deleteLocalVendor(vendorId);
@@ -166,8 +175,8 @@ function VendorsContent() {
     }
   };
 
-  // Save quotation
-  const handleSaveQuote = async (quoteData: {
+  // Save quote
+  const handleSaveQuote = async (data: {
     vendorId: string;
     description: string;
     quotedAmount: number;
@@ -178,16 +187,19 @@ function VendorsContent() {
   }) => {
     if (!selectedEventId) return;
 
-    try {
-      await addLocalVendorQuote({
-        ...quoteData,
-        eventId: selectedEventId,
-      });
-      await loadVendors(selectedEventId);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to record quote.";
-      throw new Error(msg);
-    }
+    await addLocalVendorQuote({
+      vendorId: data.vendorId,
+      eventId: selectedEventId,
+      description: data.description,
+      quotedAmount: data.quotedAmount,
+      currency: data.currency,
+      validUntil: data.validUntil,
+      isSelected: data.isSelected,
+      quoteDocumentUrl: data.quoteDocumentUrl,
+    });
+
+    await loadVendors(selectedEventId);
+    setTargetVendorForQuote(null);
   };
 
   // Select quote
@@ -260,15 +272,15 @@ function VendorsContent() {
   const getStatusBadge = (status: VendorStatus) => {
     switch (status) {
       case "BOOKED":
-        return <Badge variant="success" className="text-[10px]">Booked</Badge>;
+        return <Badge variant="success" size="sm">Booked</Badge>;
       case "QUOTED":
-        return <Badge variant="primary" className="text-[10px]">Quoted</Badge>;
+        return <Badge variant="primary" size="sm">Quoted</Badge>;
       case "CONTACTED":
-        return <Badge variant="warning" className="text-[10px]">Contacted</Badge>;
+        return <Badge variant="warning" size="sm">Contacted</Badge>;
       case "DECLINED":
-        return <Badge variant="danger" className="text-[10px]">Declined</Badge>;
+        return <Badge variant="danger" size="sm">Declined</Badge>;
       default:
-        return <Badge variant="secondary" className="text-[10px]">Researching</Badge>;
+        return <Badge variant="secondary" size="sm">Researching</Badge>;
     }
   };
 
@@ -281,8 +293,8 @@ function VendorsContent() {
           description="Organize candidate providers, log official quotes, and compare side-by-side pricing."
         />
 
-        <div className="flex items-center gap-2 self-start md:self-auto">
-          <Calendar className="h-4 w-4 text-surface-500" />
+        <div className="flex items-center gap-2 self-start md:self-auto rounded-2xl glass-card px-3.5 py-2 shadow-glass-subtle">
+          <Calendar className="h-4 w-4 text-primary-600" />
           <select
             value={selectedEventId || ""}
             onChange={(e) => {
@@ -291,10 +303,10 @@ function VendorsContent() {
                 setSelectedEventId(id);
               });
             }}
-            className="rounded-lg border border-surface-300 bg-white px-3 py-1.5 text-xs font-medium text-surface-800 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            className="glass-input rounded-xl px-3 py-1.5 text-xs font-semibold text-surface-800 shadow-glass-subtle cursor-pointer focus:outline-none"
           >
             {events.map((evt) => (
-              <option key={evt.id} value={evt.id}>
+              <option key={evt.id} value={evt.id} className="bg-white text-surface-900">
                 {evt.title} ({evt.type})
               </option>
             ))}
@@ -302,11 +314,11 @@ function VendorsContent() {
         </div>
       </div>
 
-      {/* Safety Directive Banner */}
-      <div className="flex items-start gap-3 rounded-xl border border-warning-500/20 bg-warning-50/70 p-3.5 text-xs text-warning-900 shadow-sm">
-        <ShieldAlert className="h-4 w-4 shrink-0 text-warning-600 mt-0.5" />
-        <div>
-          <span className="font-semibold text-warning-950">Deterministic Vendor Integrity:</span> All
+      {/* Safety Directive Banner in Luminous Glass */}
+      <div className="flex items-start gap-3 rounded-2xl border border-warning-500/25 bg-warning-50/80 backdrop-blur-md p-4 text-xs text-warning-950 shadow-glass-subtle">
+        <ShieldAlert className="h-5 w-5 shrink-0 text-warning-600 mt-0.5" />
+        <div className="leading-relaxed">
+          <span className="font-bold text-warning-950">Deterministic Vendor Integrity:</span> All
           records below represent verified user-logged vendor communications and quotations.
           EventCraft AI never fabricates vendor identities, phone numbers, or unverified quotes.
         </div>
@@ -319,7 +331,7 @@ function VendorsContent() {
       )}
 
       {error && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs text-rose-800">
+        <div className="rounded-2xl border border-danger-200/80 bg-danger-50/80 backdrop-blur-md p-4 text-xs text-danger-800 shadow-glass">
           {error}
         </div>
       )}
@@ -327,7 +339,7 @@ function VendorsContent() {
       {!loadingVendors && selectedEvent && (
         <>
           {/* Main Workspace Tabs Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-surface-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-surface-200/60">
             <Tabs
               activeTab={activeTab}
               onChange={setActiveTab}
@@ -343,7 +355,7 @@ function VendorsContent() {
                 setEditingVendor(null);
                 setIsVendorModalOpen(true);
               }}
-              className="gap-1.5 text-xs self-start sm:self-auto"
+              className="gap-1.5 text-xs self-start sm:self-auto shadow-glass font-medium"
             >
               <PlusCircle className="h-3.5 w-3.5" />
               <span>Add Vendor</span>
@@ -352,15 +364,15 @@ function VendorsContent() {
 
           {/* TAB 1: VENDOR DIRECTORY */}
           {activeTab === "directory" && (
-            <div className="space-y-4 pt-2">
-              {/* Category & Status Filters */}
-              <div className="flex flex-wrap items-center gap-3 p-3 bg-surface-50 border border-surface-200 rounded-xl text-xs">
-                <span className="font-semibold text-surface-700">Filter by:</span>
+            <div className="space-y-4 pt-2 animate-page-enter">
+              {/* Category & Status Filters in Glass Surface */}
+              <div className="flex flex-wrap items-center gap-3 p-3.5 glass-surface-subtle border border-surface-200/80 rounded-2xl text-xs shadow-glass-subtle">
+                <span className="font-bold text-surface-700">Filter by:</span>
 
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="rounded border border-surface-300 bg-white px-2.5 py-1 text-xs text-surface-800"
+                  className="glass-input rounded-xl px-3 py-1.5 text-xs text-surface-800 font-medium cursor-pointer"
                 >
                   <option value="ALL">All Categories</option>
                   {categories.map((c) => (
@@ -371,7 +383,7 @@ function VendorsContent() {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="rounded border border-surface-300 bg-white px-2.5 py-1 text-xs text-surface-800"
+                  className="glass-input rounded-xl px-3 py-1.5 text-xs text-surface-800 font-medium cursor-pointer"
                 >
                   <option value="ALL">All Statuses</option>
                   <option value="RESEARCHING">Researching</option>
@@ -381,7 +393,7 @@ function VendorsContent() {
                   <option value="DECLINED">Declined</option>
                 </select>
 
-                <span className="ml-auto text-surface-500 text-[11px]">
+                <span className="ml-auto text-surface-500 text-[11px] font-medium">
                   Showing {filteredVendors.length} of {vendors.length} vendors
                 </span>
               </div>
@@ -403,14 +415,14 @@ function VendorsContent() {
                     const selectedQuote = vendor.quotes.find((q) => q.isSelected);
 
                     return (
-                      <Card key={vendor.id} className="p-4 border-surface-200 space-y-3 text-xs">
+                      <Card key={vendor.id} hoverable className="p-5 space-y-3.5 text-xs">
                         <div className="flex items-start justify-between gap-2">
                           <div>
                             <div className="flex items-center gap-2">
-                              <h4 className="font-bold text-sm text-surface-900">{vendor.companyName}</h4>
+                              <h4 className="font-bold text-sm sm:text-base text-surface-900">{vendor.companyName}</h4>
                               {getStatusBadge(vendor.status)}
                             </div>
-                            <span className="text-[11px] text-surface-500 font-medium">
+                            <span className="text-[11px] text-surface-500 font-semibold mt-0.5 block">
                               {vendor.categoryName}
                             </span>
                           </div>
@@ -423,7 +435,7 @@ function VendorsContent() {
                                 setEditingVendor(vendor);
                                 setIsVendorModalOpen(true);
                               }}
-                              className="h-7 w-7 p-0 text-surface-500 hover:text-surface-900"
+                              className="h-7 w-7 p-0 text-surface-400 hover:text-surface-900 rounded-lg"
                               title="Edit vendor"
                             >
                               <Edit2 className="h-3.5 w-3.5" />
@@ -432,7 +444,7 @@ function VendorsContent() {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleDeleteVendor(vendor.id, vendor.companyName)}
-                              className="h-7 w-7 p-0 text-rose-500 hover:text-rose-700 hover:bg-rose-50"
+                              className="h-7 w-7 p-0 text-danger-500 hover:text-danger-700 hover:bg-danger-50/80 rounded-lg"
                               title="Delete vendor"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
@@ -440,36 +452,36 @@ function VendorsContent() {
                           </div>
                         </div>
 
-                        {/* Contact details */}
-                        <div className="grid grid-cols-2 gap-2 text-[11px] text-surface-600 bg-surface-50/70 p-2 rounded-lg border border-surface-100">
+                        {/* Contact details in Frosted Glass Box */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-surface-600 glass-surface-subtle p-3 rounded-xl border border-surface-200/70 shadow-glass-subtle">
                           {vendor.contactPerson && (
                             <div>
-                              <span className="text-surface-400 block">Contact:</span>
-                              <span className="font-medium text-surface-800">{vendor.contactPerson}</span>
+                              <span className="text-surface-400 block text-[10px] uppercase font-bold tracking-wide">Contact</span>
+                              <span className="font-semibold text-surface-800">{vendor.contactPerson}</span>
                             </div>
                           )}
                           {vendor.phone && (
-                            <div className="flex items-center gap-1">
-                              <Phone className="h-3 w-3 text-surface-400" />
-                              <span>{vendor.phone}</span>
+                            <div className="flex items-center gap-1.5">
+                              <Phone className="h-3.5 w-3.5 text-surface-400" />
+                              <span className="font-mono">{vendor.phone}</span>
                             </div>
                           )}
                           {vendor.email && (
-                            <div className="flex items-center gap-1 truncate col-span-2">
-                              <Mail className="h-3 w-3 text-surface-400 shrink-0" />
-                              <a href={`mailto:${vendor.email}`} className="text-primary-600 hover:underline truncate">
+                            <div className="flex items-center gap-1.5 truncate col-span-1 sm:col-span-2">
+                              <Mail className="h-3.5 w-3.5 text-surface-400 shrink-0" />
+                              <a href={`mailto:${vendor.email}`} className="text-primary-600 hover:underline truncate font-medium">
                                 {vendor.email}
                               </a>
                             </div>
                           )}
                           {vendor.websiteUrl && (
-                            <div className="flex items-center gap-1 truncate col-span-2">
-                              <Globe className="h-3 w-3 text-surface-400 shrink-0" />
+                            <div className="flex items-center gap-1.5 truncate col-span-1 sm:col-span-2">
+                              <Globe className="h-3.5 w-3.5 text-surface-400 shrink-0" />
                               <a
                                 href={vendor.websiteUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-primary-600 hover:underline truncate"
+                                className="text-primary-600 hover:underline truncate font-medium"
                               >
                                 {vendor.websiteUrl.replace(/^https?:\/\//, "")}
                               </a>
@@ -478,21 +490,21 @@ function VendorsContent() {
                         </div>
 
                         {vendor.notes && (
-                          <p className="text-[11px] text-surface-500 italic">
+                          <p className="text-[11px] text-surface-500 italic leading-relaxed">
                             &ldquo;{vendor.notes}&rdquo;
                           </p>
                         )}
 
                         {/* Quotations summary footer */}
-                        <div className="flex items-center justify-between pt-2 border-t border-surface-100 text-[11px]">
+                        <div className="flex items-center justify-between pt-2.5 border-t border-surface-200/50 text-[11px]">
                           <div>
                             {selectedQuote ? (
-                              <span className="font-semibold text-emerald-700 flex items-center gap-1">
-                                <CheckCircle2 className="h-3 w-3" />
+                              <span className="font-bold text-emerald-700 flex items-center gap-1.5">
+                                <CheckCircle2 className="h-3.5 w-3.5" />
                                 <span>Selected: {formatMoney(selectedQuote.quotedAmount, selectedQuote.currency)}</span>
                               </span>
                             ) : (
-                              <span className="text-surface-400">
+                              <span className="text-surface-400 font-medium">
                                 {vendor.quotes.length} quote{vendor.quotes.length !== 1 ? "s" : ""} logged
                               </span>
                             )}
@@ -505,9 +517,9 @@ function VendorsContent() {
                               setTargetVendorForQuote({ id: vendor.id, name: vendor.companyName });
                               setIsQuoteModalOpen(true);
                             }}
-                            className="h-6 text-[10px] px-2 gap-1 text-primary-700 border-primary-200 bg-primary-50 hover:bg-primary-100"
+                            className="h-7 text-[11px] px-2.5 gap-1.5 text-primary-700 border-primary-200/80 bg-primary-50/80 hover:bg-primary-100 shadow-glass-subtle font-semibold"
                           >
-                            <FileText className="h-3 w-3" />
+                            <FileText className="h-3.5 w-3.5" />
                             <span>Log Quote</span>
                           </Button>
                         </div>
@@ -521,8 +533,8 @@ function VendorsContent() {
 
           {/* TAB 2: QUOTE COMPARISON TABLE */}
           {activeTab === "quotes" && (
-            <div className="pt-2">
-              <Card className="p-5 border-surface-200">
+            <div className="pt-2 animate-page-enter">
+              <Card className="p-5 sm:p-6">
                 <QuoteComparisonTable
                   vendors={vendors}
                   onSelectQuote={handleSelectQuote}

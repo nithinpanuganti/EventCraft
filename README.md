@@ -171,7 +171,8 @@ flowchart TD
 ## Technology Stack
 
 ### Frontend and Client Runtime
-- **Framework**: [Next.js 15.2.1](https://nextjs.org/) (Static page generation, client-rendered App Router)
+- **Framework**: [Next.js 15.2.1](https://nextjs.org/) (Static HTML Export `output: 'export'`, client-rendered App Router)
+- **Hosting & Static Export**: [Netlify](https://www.netlify.com/) (Configured with `netlify.toml` and `public/_headers`)
 - **UI Library**: [React 19.0.0](https://react.dev/) (Hooks, Context, Client Components)
 - **Styling**: [Tailwind CSS 3.4.17](https://tailwindcss.com/) with custom Liquid Glass design tokens and [PostCSS 8.4.38](https://postcss.org/)
 - **Icons**: [Lucide React 1.16.0](https://lucide.dev/)
@@ -233,9 +234,12 @@ EventCraft AI/
 │   │   ├── navigation.ts           # Navigation items and route definitions
 │   │   └── utils.ts                # Class merger and currency formatting utilities
 │   └── types/                      # Shared TypeScript interface definitions
+├── public/                         # Static deployment assets
+│   └── _headers                    # Netlify security headers configuration
+├── netlify.toml                    # Netlify build and publish configuration
 ├── start.bat                       # Automated Windows launcher script
 ├── vitest.config.mts               # Vitest test runner configuration
-├── next.config.js                  # Next.js configuration & HTTP security headers
+├── next.config.js                  # Next.js static export & compiler configuration
 ├── tailwind.config.js              # Tailwind styling configuration
 ├── tsconfig.json                   # TypeScript compiler configuration
 └── package.json                    # Project dependencies, scripts, and metadata
@@ -350,11 +354,11 @@ npm run type-check
 # Run Next.js and ESLint code quality checks
 npm run lint
 
-# Build the optimized production application bundle
+# Build and statically export the production bundle into out/
 npm run build
 
-# Start the Next.js production server
-npm run start
+# Preview the production static export locally
+npx serve out
 ```
 
 ### Verified Test Suite Breakdown
@@ -401,10 +405,31 @@ EventCraft AI prioritizes user privacy and data ownership through clear storage 
 
 ---
 
+## Static Deployment (Netlify)
+
+EventCraft AI is fully prepared for static deployment on **Netlify** or any standard static web host:
+
+### Architecture & Configuration
+- **Static HTML Export**: `output: 'export'` and `trailingSlash: true` configured in [`next.config.js`](next.config.js).
+- **Publish Directory**: `out/` generated on `npm run build` containing all 14 prerendered application routes.
+- **Security Headers**: Defined in [`public/_headers`](public/_headers) (automatically copied to `out/_headers`) setting `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, and restrictive permissions policies.
+- **Netlify Configuration**: [`netlify.toml`](netlify.toml) pre-specifies the build command (`npm run build`) and output folder (`out`).
+
+### Deploying to Netlify
+1. Connect this repository to your Netlify dashboard.
+2. Netlify will auto-detect the build command (`npm run build`) and publish directory (`out`) from `netlify.toml`.
+3. Click **Deploy**.
+
+> [!IMPORTANT]
+> **Data Portability Notice**: Because EventCraft AI uses browser-native IndexedDB, data stored during local development on `localhost` does not automatically transfer to your deployed web domain. To migrate your events, export a backup from `http://localhost:3000/settings` and restore the `.json` file on your deployed Netlify URL.
+
+---
+
 ## Current Status and Roadmap
 
 ### Implemented and Verified Capabilities
 - [x] 100% Browser-local architecture with zero runtime server or database dependencies.
+- [x] Netlify static deployment ready with `out/` export, `netlify.toml`, and `public/_headers`.
 - [x] Multi-archetype event planning wizard (Weddings, Birthdays, Community Events).
 - [x] Complete client persistence with 9 IndexedDB stores and SSR in-memory fallback.
 - [x] Exact-cent integer budgeting engine with guaranteed zero-rounding-error balancing.

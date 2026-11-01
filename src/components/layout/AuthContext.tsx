@@ -15,6 +15,8 @@ import {
   deleteLocalProfile,
   listLocalEvents,
   seedDemoAccountsAndEvents,
+  authenticateLocalProfile,
+  clearActiveLocalProfile,
 } from "@/lib/storage/local-repository";
 
 export interface SessionUser {
@@ -73,6 +75,7 @@ interface AuthContextValue {
     maybeRole?: UserRole
   ) => Promise<LocalProfile>;
   loadDemoAccounts: () => Promise<void>;
+  loginRoleAccount: (role: UserRole, usernameOrEmail: string, passcode: string) => Promise<{ success: boolean; error?: string }>;
   removeProfile: (profileId: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -254,7 +257,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [refreshSession]
   );
 
+  const loginRoleAccount = useCallback(
+    async (role: UserRole, usernameOrEmail: string, passcode: string) => {
+      const res = await authenticateLocalProfile(role, usernameOrEmail, passcode);
+      if (res.success && res.profile) {
+        setActiveProfile(res.profile);
+        await refreshSession();
+        return { success: true };
+      }
+      return { success: false, error: res.error || "Login failed" };
+    },
+    [refreshSession]
+  );
+
   const logout = useCallback(async () => {
+    await clearActiveLocalProfile();
+    setActiveProfile(null);
+    setEvents([]);
     router.push("/login");
   }, [router]);
 
@@ -294,6 +313,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       switchRoleQuick,
       createProfile,
       loadDemoAccounts,
+      loginRoleAccount,
       removeProfile,
       logout,
     }),
@@ -312,6 +332,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       switchRoleQuick,
       createProfile,
       loadDemoAccounts,
+      loginRoleAccount,
       removeProfile,
       logout,
     ]

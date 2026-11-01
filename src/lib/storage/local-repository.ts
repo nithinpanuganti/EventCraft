@@ -36,7 +36,9 @@ import {
   PaymentStatus,
   TaskWithDependencies,
   VendorWithQuotes,
+  RsvpStatus,
 } from "./types";
+export type { VendorWithQuotes } from "./types";
 import type { CanonicalTaskStatus } from "../timeline/task-state-machine";
 
 const ACTIVE_PROFILE_KEY = "eventcraft_active_profile_id";
@@ -124,11 +126,53 @@ export async function hashLocalPasscode(passcode?: string): Promise<string | und
   return `local_hash_${Math.abs(hash)}`;
 }
 
+export async function clearActiveLocalProfile(): Promise<void> {
+  memoryActiveProfileId = null;
+  if (typeof window !== "undefined" && window.localStorage) {
+    window.localStorage.removeItem(ACTIVE_PROFILE_KEY);
+  }
+}
+
+export const DEMO_CREDENTIALS: Record<
+  UserRole,
+  { name: string; username: string; password: string; roleName: string; responsibility: string }
+> = {
+  ORGANIZER: {
+    name: "Olivia Organizer",
+    username: "organizer.demo",
+    password: "organizer123",
+    roleName: "Event Organizer",
+    responsibility: "Manage all events, budgets, guests, vendors, reports, and application settings.",
+  },
+  COORDINATOR: {
+    name: "Ethan Coordinator",
+    username: "coordinator.demo",
+    password: "coordinator123",
+    roleName: "Event Coordinator",
+    responsibility: "Manage assigned events, schedules, tasks, volunteers, and event-day operations.",
+  },
+  VENDOR: {
+    name: "Sophia Vendor",
+    username: "vendor.demo",
+    password: "vendor123",
+    roleName: "Vendor",
+    responsibility: "Manage vendor profile, quotations, assigned bookings, contracts, and payment records.",
+  },
+  GUEST: {
+    name: "Liam Guest",
+    username: "guest.demo",
+    password: "guest123",
+    roleName: "Guest",
+    responsibility: "View invitations, respond to RSVPs, access event details, and view seating assignments.",
+  },
+};
+
 export async function createLocalProfile(
   nameOrParams:
     | string
     | {
         name: string;
+        username?: string;
         email: string;
         passcode?: string;
         role?: UserRole;
@@ -143,6 +187,7 @@ export async function createLocalProfile(
   maybeRole?: UserRole
 ): Promise<LocalProfile> {
   const name = typeof nameOrParams === "object" ? nameOrParams.name : nameOrParams;
+  const username = typeof nameOrParams === "object" ? nameOrParams.username : undefined;
   const email =
     typeof nameOrParams === "object"
       ? nameOrParams.email
@@ -157,6 +202,7 @@ export async function createLocalProfile(
   const newProfile: LocalProfile = {
     id: generateId("prof"),
     name: name.trim(),
+    username: username ? username.trim().toLowerCase() : undefined,
     email: email.trim().toLowerCase(),
     role,
     phone: typeof nameOrParams === "object" ? nameOrParams.phone : undefined,
@@ -179,6 +225,73 @@ export async function verifyLocalProfilePasscode(profileId: string, passcode: st
   if (!profile || !profile.passcodeHash) return true;
   const computed = await hashLocalPasscode(passcode);
   return profile.passcodeHash === computed;
+}
+
+export async function findLocalProfileByUsernameOrEmail(
+  identifier: string,
+  role?: UserRole
+): Promise<LocalProfile | null> {
+  const profiles = await getLocalProfiles();
+  const cleanId = identifier.trim().toLowerCase();
+  const found = profiles.find((p) => {
+    const matchesUser = p.username?.toLowerCase() === cleanId || p.email.toLowerCase() === cleanId;
+    if (!matchesUser) return false;
+    if (role && (p.role || "ORGANIZER") !== role) return false;
+    return true;
+  });
+  return found || null;
+}
+
+export async function authenticateLocalProfile(
+  role: UserRole,
+  usernameOrEmail: string,
+  passcode: string
+): Promise<{ success: boolean; profile?: LocalProfile; error?: string }> {
+  if (!usernameOrEmail.trim()) {
+    return { success: false, error: "Please enter your username or email." };
+  }
+  if (!passcode) {
+    return { success: false, error: "Please enter your password." };
+  }
+
+  // Ensure demo accounts are hydrated if looking for standard demo user
+  const demo = DEMO_CREDENTIALS[role];
+  let profile = await findLocalProfileByUsernameOrEmail(usernameOrEmail, role);
+
+  if (
+    !profile &&
+    demo &&
+    (usernameOrEmail.trim().toLowerCase() === demo.username ||
+      usernameOrEmail.trim().toLowerCase() === `${demo.username}@eventcraft.local`)
+  ) {
+    await seedDemoAccountsAndEvents();
+    profile = await findLocalProfileByUsernameOrEmail(usernameOrEmail, role);
+  }
+
+  if (!profile) {
+    return {
+      success: false,
+      error: `No active account found for ${role.toLowerCase()} with identifier '${usernameOrEmail}'.`,
+    };
+  }
+
+  if (profile.role && profile.role !== role) {
+    return {
+      success: false,
+      error: `This account is registered as ${profile.role}, not ${role}. Please use the corresponding login portal.`,
+    };
+  }
+
+  const isValidPass = await verifyLocalProfilePasscode(profile.id, passcode);
+  if (!isValidPass) {
+    return {
+      success: false,
+      error: "Invalid password for this account. Please try again or use the demo password.",
+    };
+  }
+
+  await setActiveLocalProfile(profile.id);
+  return { success: true, profile };
 }
 
 export async function deleteLocalProfile(profileId: string): Promise<boolean> {
@@ -1063,6 +1176,17 @@ export async function updateLocalGuest(
   return updated;
 }
 
+export async function updateLocalGuestRsvp(
+  guestId: string,
+  rsvpStatus: RsvpStatus,
+  dietaryPreferences?: string[]
+): Promise<LocalGuest> {
+  return updateLocalGuest(guestId, {
+    rsvpStatus,
+    ...(dietaryPreferences ? { dietaryPreferences } : {}),
+  });
+}
+
 export async function deleteLocalGuest(guestId: string): Promise<boolean> {
   const existing = await dbGet<LocalGuest>("guests", guestId);
   if (!existing) return false;
@@ -1831,13 +1955,15 @@ export async function seedDemoAccountsAndEvents(): Promise<{
   // 1. Create or retrieve the 4 role profiles
   const profiles = await dbGetAll<LocalProfile>("profiles");
 
-  let org = profiles.find((p) => p.email === "elena.organizer@eventcraft.local");
+  let org = profiles.find((p) => p.username === "organizer.demo" || p.email === "organizer.demo@eventcraft.local" || p.email === "elena.organizer@eventcraft.local");
   if (!org) {
     org = await createLocalProfile({
-      name: "Elena Rostova",
-      email: "elena.organizer@eventcraft.local",
+      name: "Olivia Organizer",
+      username: "organizer.demo",
+      email: "organizer.demo@eventcraft.local",
+      passcode: "organizer123",
       role: "ORGANIZER",
-      organization: "Rostova Premier Events",
+      organization: "Imperial Grand Events & Galas",
       phone: "+1 (555) 019-2831",
     });
   }
@@ -1861,13 +1987,15 @@ export async function seedDemoAccountsAndEvents(): Promise<{
   await generateAndSaveLocalPlan(event.id);
 
   // 3. Create Coordinator Account
-  let coord = profiles.find((p) => p.email === "marcus.coord@eventcraft.local");
+  let coord = profiles.find((p) => p.username === "coordinator.demo" || p.email === "coordinator.demo@eventcraft.local" || p.email === "marcus.coord@eventcraft.local");
   if (!coord) {
     coord = await createLocalProfile({
-      name: "Marcus Vance",
-      email: "marcus.coord@eventcraft.local",
+      name: "Ethan Coordinator",
+      username: "coordinator.demo",
+      email: "coordinator.demo@eventcraft.local",
+      passcode: "coordinator123",
       role: "COORDINATOR",
-      organization: "Vance Event Execution Co.",
+      organization: "Vance Event Execution Logistics",
       phone: "+1 (555) 438-9210",
       assignedEventIds: [event.id],
     });
@@ -1875,14 +2003,14 @@ export async function seedDemoAccountsAndEvents(): Promise<{
 
   // 4. Create Vendor Account & Profile
   const vendors = await getLocalVendors(event.id);
-  let vendorId = vendors.find((v) => v.companyName === "Apex Sound & Lighting")?.id;
+  let vendorId = vendors.find((v) => v.companyName === "Apex Sound & Lighting" || v.companyName === "Apex Sound, Lighting & Floral Studio")?.id;
   if (!vendorId) {
     const createdVendor = await createLocalVendor({
       eventId: event.id,
-      companyName: "Apex Sound & Lighting",
-      categoryName: "Music / DJ",
-      contactPerson: "Julian Cole",
-      email: "julian@apexsound.local",
+      companyName: "Apex Sound, Lighting & Floral Studio",
+      categoryName: "Music / DJ / Staging",
+      contactPerson: "Sophia Vendor",
+      email: "vendor.demo@eventcraft.local",
       phone: "+1 (555) 832-1104",
       notes: "Selected as primary sound, acoustic, and luminous staging provider.",
     });
@@ -1897,14 +2025,16 @@ export async function seedDemoAccountsAndEvents(): Promise<{
     });
   }
 
-  let vendorUser = profiles.find((p) => p.email === "julian@apexsound.local");
+  let vendorUser = profiles.find((p) => p.username === "vendor.demo" || p.email === "vendor.demo@eventcraft.local" || p.email === "julian@apexsound.local");
   if (!vendorUser) {
     vendorUser = await createLocalProfile({
-      name: "Julian Cole (Apex Sound)",
-      email: "julian@apexsound.local",
+      name: "Sophia Vendor",
+      username: "vendor.demo",
+      email: "vendor.demo@eventcraft.local",
+      passcode: "vendor123",
       role: "VENDOR",
       vendorId,
-      organization: "Apex Sound & Lighting",
+      organization: "Apex Sound, Lighting & Floral Studio",
       phone: "+1 (555) 832-1104",
       assignedEventIds: [event.id],
     });
@@ -2000,20 +2130,20 @@ export async function seedDemoAccountsAndEvents(): Promise<{
 
   // 6. Create Guests
   const existingGuests = await getLocalGuests(event.id);
-  let vipGuest = existingGuests.find((g) => g.email === "sophia.lin@guest.local");
-  if (!vipGuest) {
-    vipGuest = await createLocalGuest({
+  let liamGuest = existingGuests.find((g) => g.email === "guest.demo@eventcraft.local" || g.name === "Liam Guest");
+  if (!liamGuest) {
+    liamGuest = await createLocalGuest({
       eventId: event.id,
-      name: "Dr. Sophia Lin",
-      email: "sophia.lin@guest.local",
+      name: "Liam Guest",
+      email: "guest.demo@eventcraft.local",
       phone: "+1 (555) 771-3920",
       category: "VIP",
       invitationStatus: "DELIVERED",
       rsvpStatus: "CONFIRMED",
       plusOneAllowed: true,
       plusOneCount: 1,
-      plusOneNames: ["Arthur Pendelton"],
-      dietaryPreferences: ["Vegetarian", "Gluten-Free"],
+      plusOneNames: ["Emma Guest"],
+      dietaryPreferences: ["Nut Allergy", "Vegetarian"],
       accessibilityRequirements: "Requires step-free entry near entrance",
       groupName: "Distinguished Scholars",
       tableId: headTable.id,
@@ -2041,15 +2171,15 @@ export async function seedDemoAccountsAndEvents(): Promise<{
 
     await createLocalGuest({
       eventId: event.id,
-      name: "Liam O'Connor",
-      email: "liam.oconnor@local.dev",
+      name: "Dr. Sophia Lin",
+      email: "sophia.lin@guest.local",
       category: "FAMILY",
       invitationStatus: "SENT",
       rsvpStatus: "CONFIRMED",
       plusOneAllowed: false,
       plusOneCount: 0,
       plusOneNames: [],
-      dietaryPreferences: ["Nut Allergy"],
+      dietaryPreferences: ["Gluten-Free"],
       tableId: null,
       seatNumber: null,
       checkInStatus: false,
@@ -2057,13 +2187,15 @@ export async function seedDemoAccountsAndEvents(): Promise<{
   }
 
   // 7. Create Guest Account
-  let guestUser = profiles.find((p) => p.email === "sophia.lin@guest.local");
+  let guestUser = profiles.find((p) => p.username === "guest.demo" || p.email === "guest.demo@eventcraft.local" || p.email === "sophia.lin@guest.local");
   if (!guestUser) {
     guestUser = await createLocalProfile({
-      name: "Dr. Sophia Lin",
-      email: "sophia.lin@guest.local",
+      name: "Liam Guest",
+      username: "guest.demo",
+      email: "guest.demo@eventcraft.local",
+      passcode: "guest123",
       role: "GUEST",
-      guestId: vipGuest.id,
+      guestId: liamGuest.id,
       phone: "+1 (555) 771-3920",
       assignedEventIds: [event.id],
     });

@@ -2,6 +2,7 @@ import React from "react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { AuthProvider } from "./AuthContext";
+import { RoleGuard } from "./RoleGuard";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -54,7 +55,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             tabIndex={-1}
             className="flex-1 px-4 py-8 sm:px-6 lg:px-8 max-w-7xl w-full mx-auto transition-opacity duration-200 outline-none"
           >
-            {children}
+            <RoleGuard>{children}</RoleGuard>
           </main>
         </div>
       </div>

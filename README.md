@@ -12,11 +12,11 @@ The application operates on a **100% browser-local architecture** powered by nat
 [![Next.js](https://img.shields.io/badge/Next.js-15.5.28-000000?style=flat-square&logo=nextdotjs&logoColor=white)](next.config.js)
 [![React](https://img.shields.io/badge/React-19.0.0-61DAFB?style=flat-square&logo=react&logoColor=black)](package.json)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4.17-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)](tailwind.config.js)
-[![Vitest](https://img.shields.io/badge/Tests-101%20passed%20(11%20suites)-success?style=flat-square&logo=vitest&logoColor=white)](vitest.config.mts)
+[![Vitest](https://img.shields.io/badge/Tests-106%20passed%20(11%20suites)-success?style=flat-square&logo=vitest&logoColor=white)](vitest.config.mts)
 [![Accessibility](https://img.shields.io/badge/Accessibility-WCAG%202.2%20AA%20Compliant-blue?style=flat-square)](src/lib/accessibility/accessibility-and-quality.test.ts)
 [![Persistence](https://img.shields.io/badge/Persistence-IndexedDB%20v4%20(21%20Stores)-8A2BE2?style=flat-square)](src/lib/storage/indexed-db.ts)
 [![Architecture](https://img.shields.io/badge/Architecture-100%25%20Browser--Local%20%2F%20Zero--Network-10B981?style=flat-square)](src/lib/storage/local-repository.ts)
-[![Static Export](https://img.shields.io/badge/Static%20Export-29%20Prerendered%20Routes-blueviolet?style=flat-square)](next.config.js)
+[![Static Export](https://img.shields.io/badge/Static%20Export-33%20Prerendered%20Routes-blueviolet?style=flat-square)](next.config.js)
 [![License](https://img.shields.io/badge/License-Private-lightgrey?style=flat-square)](package.json)
 
 ---
@@ -77,26 +77,50 @@ flowchart LR
     Gst --> Ops4[RSVP Portal, Table View & Pass]
 ```
 
+### Demonstration Sample Accounts
+
+EventCraft AI comes pre-configured with four local demonstration identities. Each persona includes pre-seeded relationships, tasks, quotations, and invitations:
+
+| Role | Name | Username | Password | Dedicated Dashboard & Scope |
+| :--- | :--- | :--- | :--- | :--- |
+| **Event Organizer** | **Olivia Organizer** | `organizer.demo` | `organizer123` | [`/dashboard/organizer`](src/app/dashboard/organizer/page.tsx) • 9 widgets, full governance over budgets, seating, contracts, and audit reports. |
+| **Event Coordinator** | **Ethan Coordinator** | `coordinator.demo` | `coordinator123` | [`/dashboard/coordinator`](src/app/dashboard/coordinator/page.tsx) • 6 widgets, day-of runsheet execution, volunteer check-in, and incident desk. |
+| **Vendor Partner** | **Sophia Vendor** | `vendor.demo` | `vendor123` | [`/dashboard/vendor`](src/app/dashboard/vendor/page.tsx) • 6 widgets, assigned bookings, quotation proposals, signed contracts, and payment balances. |
+| **Invited Guest** | **Liam Guest** | `guest.demo` | `guest123` | [`/dashboard/guest`](src/app/dashboard/guest/page.tsx) • 4 widgets, formal invitation, interactive RSVP, dietary setup, Table 1 seating, and QR pass. |
+
+> **Browser-Only Password Security**: Demonstration passwords are SHA-256 hashed with a local salt before being written to IndexedDB. No plaintext passwords persist in storage.
+
 ### 1. Event Organizer (`ORGANIZER`)
+- **Dedicated Dashboard ([`/dashboard/organizer`](src/app/dashboard/organizer/page.tsx))**: 9 widgets tracking Total Events, Upcoming Events, Completed Events, Total Budget, Actual Spending, Remaining Budget, Confirmed Guests, Pending Tasks, and Vendor Bookings.
 - **Full Operational Scope**: Create and manage events, budgets, timeline tasks, vendor contracts, invitations, seating charts, and risk matrices.
 - **Executive Analytics**: Access 6 audit reports (Executive Summary, Budget Audit, Guest Roster, Vendor Settlement, Task Execution, Post-Event Settlement) with CSV export and print view.
 - **Global Settings**: Configure profiles, export atomic JSON backups, and manage application preferences.
 
 ### 2. Event Coordinator (`COORDINATOR`)
-- **Field Command**: Access the live Day-of Control Center with ticking clocks, countdown timers, runsheet task toggles, and incident desks.
+- **Dedicated Dashboard ([`/dashboard/coordinator`](src/app/dashboard/coordinator/page.tsx))**: 6 widgets tracking Assigned Events, Pending Tasks, Completed Tasks, Overdue Tasks, Upcoming Activities, and Active Issues.
+- **Field Command**: Access the live Day-of Control Center with ticking clocks, countdown timers, runsheet task completion toggles, and incident desks.
 - **Guest Ingress**: Live QR Check-in console with arrival progress meters and camera/manual verification.
 - **Volunteers & Staff**: Manage shifts, stations, and volunteer check-ins.
 - **Emergency Directory**: Rapid access to law enforcement, fire, medical, venue operations, and key organizers.
+- **Boundary Restriction**: Strictly isolated from organizer financial settings and company budget ledgers.
 
 ### 3. Vendor Partner (`VENDOR`)
+- **Dedicated Dashboard ([`/dashboard/vendor`](src/app/dashboard/vendor/page.tsx))**: 6 widgets tracking Total Bookings, Pending Quotations, Confirmed Bookings, Upcoming Services, Pending Balance Due, and Completed Services.
 - **Commercial Visibility**: View assigned contracts, quotation comparisons, and payment milestone terms.
 - **Payment Ledger**: Real-time financial balances tracking total committed funds, advance disbursements, and outstanding balances.
 - **Direct Support**: Instant emergency contacts and coordinator dial links.
+- **Boundary Restriction**: Restricted strictly to own vendor bookings and agreements.
 
 ### 4. Guest (`GUEST`)
-- **Self-Service RSVP Portal**: Submit RSVPs (`CONFIRMED`, `DECLINED`), declare dietary restrictions, and allocate plus-ones.
+- **Dedicated Dashboard ([`/dashboard/guest`](src/app/dashboard/guest/page.tsx))**: 4 widgets tracking Total Invitations, Confirmed Events, Pending Responses, and Upcoming Events.
+- **Self-Service RSVP Portal**: Submit RSVPs (`CONFIRMED`, `DECLINED`), declare dietary preferences (e.g. Nut Allergy, Vegetarian), and accessibility requirements.
 - **Personalized Table Locator**: View assigned table numbers, seating arrangements, and tablemates.
 - **Digital Pass**: Display client-side generated QR pass for rapid entrance check-in.
+- **Boundary Restriction**: Restricted from back-of-house planning tools and vendor contracts.
+
+### 5. Centralized Role-Based Access Control (RBAC)
+- Implemented in [`src/lib/permissions.ts`](src/lib/permissions.ts) defining 27 operational permissions and allowed route boundaries.
+- Protected by [`RoleGuard.tsx`](src/components/layout/RoleGuard.tsx) intercepting unauthorized route access with an accessible **403 Access Restricted** interface.
 
 ---
 
@@ -227,7 +251,11 @@ EventCraft AI features a cohesive, premium **Liquid Glass** user interface desig
 | Route | View | Description |
 | :--- | :--- | :--- |
 | `/` | **Landing Page** | Product introduction, architectural summary, feature highlights, and quick-start actions. |
-| `/dashboard` | **Event Dashboard** | Central overview displaying active event countdowns, budget health meters, and upcoming tasks. |
+| `/dashboard` | **Adaptive Dashboard** | Central role router intelligently serving the active user's role-specific dashboard. |
+| `/dashboard/organizer` | **Organizer Dashboard** | Executive planning command hub with 9 operational & financial widgets, budgets, and milestones. |
+| `/dashboard/coordinator`| **Coordinator Dashboard**| Day-of operations console with 6 widgets, runsheet task toggles, and incident desk. |
+| `/dashboard/vendor` | **Vendor Dashboard** | Commercial partner portal with 6 pipeline widgets, contract terms, and balance ledger. |
+| `/dashboard/guest` | **Guest Dashboard** | Attendee portal with 4 widgets, interactive RSVP updater, seating card, and QR pass. |
 | `/events` | **Event Selector** | List of all planned events with quick status cards, switcher options, and .ICS calendar export. |
 | `/events/new` | **Event Wizard** | Step-by-step creation flow for configuring archetype, dates, guests, and initial budget. |
 | `/planner` | **Plan & Revisions** | Concept narrative, themes, color palettes, recommendations, and conversational revision console. |
@@ -246,12 +274,12 @@ EventCraft AI features a cohesive, premium **Liquid Glass** user interface desig
 | `/documents` | **Document Vault** | Local Base64 file attachment storage with category filtering and instant download. |
 | `/emergency-contacts`| **Emergency Directory**| Categorized directory of Police, Fire, Medical, Security, and Venue contacts with 1-click calls. |
 | `/settings` | **Settings & Backup** | Role profile switcher, passcode configuration, atomic JSON backup export, and backup restore. |
-| `/login` | **Role Login** | Multi-role login console with pre-configured demo account buttons and local storage disclosure. |
+| `/login` | **Role Gateway** | Central multi-role landing page with 4 visually distinct role cards and demo accounts. |
 | `/register` | **Registration** | Role-specific profile registration stored securely in local browser storage. |
-| `/login/organizer` | **Organizer Login** | Direct login and demo launcher for Event Organizers. |
-| `/login/coordinator` | **Coordinator Login**| Direct login and demo launcher for Event Coordinators. |
-| `/login/vendor` | **Vendor Login** | Direct login and demo launcher for Vendor Partners. |
-| `/login/guest` | **Guest Login** | Direct login and demo launcher for Guests. |
+| `/login/organizer` | **Organizer Login** | Dedicated login page with credentials, show/hide password, and 1-click demo launcher. |
+| `/login/coordinator` | **Coordinator Login**| Dedicated login page with credentials, show/hide password, and 1-click demo launcher. |
+| `/login/vendor` | **Vendor Login** | Dedicated login page with credentials, show/hide password, and 1-click demo launcher. |
+| `/login/guest` | **Guest Login** | Dedicated login page with credentials, show/hide password, and 1-click demo launcher. |
 
 ---
 
@@ -516,14 +544,14 @@ npx serve out
 ### Verified Test Suite Breakdown
 EventCraft AI includes a test suite covering unit math, dependency resolution algorithms, storage persistence, schema validation, command interpretation, multi-role navigation, calendar generation, CSV security, and WCAG accessibility standards.
 
-**Current Test Results**: **101 passed** across **11 test files** (100% success rate):
+**Current Test Results**: **106 passed** across **11 test files** (100% success rate):
 
 | Category | Test Suite File | Count | Verified Behaviors |
 | :--- | :--- | :---: | :--- |
 | **Accessibility & Security** | `src/lib/accessibility/accessibility-and-quality.test.ts` | 17 | CSV formula injection defense (CWE-1236), RFC 4180 parsing, runtime type guards, 5×5 matrix scoring & clamping |
 | **Financial Engine** | `src/lib/budget/financial.test.ts` | 12 | Integer-cents arithmetic, category variance, zero-budget division safety, overruns |
 | **Timeline Engine** | `src/lib/timeline/task-state-machine.test.ts` | 16 | Transition state machine, cyclic dependency detection (DFS), prerequisite chains |
-| **Multi-Role System** | `src/lib/storage/multi-role-system.test.ts` | 8 | Role navigation filters, demo database seeder (21 stores), 5x5 risk scoring algorithm, CSV export/import integrity, RFC 5545 .ics generation |
+| **Multi-Role System** | `src/lib/storage/multi-role-system.test.ts` | 13 | Demo credentials verification, 4-role authentication, default dashboard resolvers, RBAC route guarding, 21-store hydration, CSV export/import integrity, RFC 5545 .ics generation |
 | **Command Interpreter**| `src/lib/local-planning/command-interpreter.test.ts` | 9 | Natural language commands (`add task`, `complete task`, `change date`, `adjust budget`, `add expense`, `regenerate plan`, `update theme`, `show remaining budget`), unsupported command guidance |
 | **Rule Engine** | `src/lib/local-planning/rule-engine.test.ts` | 5 | Wedding, Birthday, and Community deterministic blueprints, exact-cent balanced budget allocation, zero-budget division safety |
 | **Storage Architecture** | `src/lib/storage/browser-architecture.test.ts` | 5 | Zero network requests verification, profile switching/deletion, event cascade cleanup, corrupted backup rejection, navigation route integrity |
@@ -531,7 +559,7 @@ EventCraft AI includes a test suite covering unit math, dependency resolution al
 | **Local Repository** | `src/lib/storage/local-repository.test.ts` | 4 | Passcode hashing, event scoping, task dependencies, vendor quotes, and budget CRUD |
 | **Wizard Validation** | `src/lib/validations/wizard.test.ts` | 15 | 5-step event wizard schema boundaries, budget limits, future date constraints |
 | **General Validation** | `src/lib/validations/validations.test.ts` | 6 | Input schemas and partial update guardrails |
-| **Total** | **11 Suites** | **101** | **All 101 tests passing (100% success rate)** |
+| **Total** | **11 Suites** | **106** | **All 106 tests passing (100% success rate)** |
 
 ---
 
@@ -556,7 +584,7 @@ EventCraft AI is fully prepared for static deployment on **Netlify** or any stan
 
 ### Architecture & Configuration
 - **Static HTML Export**: `output: 'export'` and `trailingSlash: true` configured in [`next.config.js`](next.config.js).
-- **Publish Directory**: `out/` generated on `npm run build` containing all 29 prerendered application routes.
+- **Publish Directory**: `out/` generated on `npm run build` containing all 33 prerendered application routes.
 - **Security Headers**: Defined in [`public/_headers`](public/_headers) (automatically copied to `out/_headers`) setting `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, and restrictive permissions policies.
 - **Netlify Configuration**: [`netlify.toml`](netlify.toml) pre-specifies the build command (`npm run build`) and output folder (`out`).
 
@@ -567,6 +595,11 @@ EventCraft AI is fully prepared for static deployment on **Netlify** or any stan
 ### Implemented and Verified Capabilities
 - [x] 100% Browser-local architecture with zero runtime server or database dependencies.
 - [x] Multi-Role User System with 4 distinct roles (`ORGANIZER`, `COORDINATOR`, `VENDOR`, `GUEST`).
+- [x] Separate dedicated dashboards for all 4 roles with role-specific widgets, metrics, and actions.
+- [x] Separate dedicated login portals (`/login/organizer`, `/login/coordinator`, `/login/vendor`, `/login/guest`) with 1-click demo access.
+- [x] Central role gateway page (`/login`) with 4 distinct liquid-glass cards.
+- [x] Pre-configured demonstration accounts (Olivia Organizer, Ethan Coordinator, Sophia Vendor, Liam Guest).
+- [x] Centralized Role-Based Access Control (RBAC) with route guards and 403 Access Restricted screens.
 - [x] Complete client persistence across 21 IndexedDB stores with SSR in-memory fallback.
 - [x] Guest Management & RSVP Tracker with CSV import/export and guest self-service portal.
 - [x] Interactive Seating Arrangement Planner with smart group auto-assign & printable charts.
@@ -581,13 +614,13 @@ EventCraft AI is fully prepared for static deployment on **Netlify** or any stan
 - [x] Client-side Document Vault converting files to Base64 data URLs in IndexedDB.
 - [x] Categorized Emergency Contacts Directory with 1-click dial links.
 - [x] RFC 5545 iCalendar (`.ics`) generator and export trigger.
-- [x] Netlify static deployment ready with `out/` export, `netlify.toml`, and `public/_headers`.
+- [x] Netlify static deployment ready with `out/` export (33 static routes), `netlify.toml`, and `public/_headers`.
 - [x] Multi-archetype event planning wizard (Weddings, Birthdays, Community Events).
 - [x] Exact-cent integer budgeting engine with guaranteed zero-rounding-error balancing.
 - [x] Phased task state machine with DFS cyclic dependency prevention.
 - [x] Conversational command interpreter for natural-language plan adjustments.
 - [x] Translucent Liquid Glass design system built with responsive Tailwind CSS.
-- [x] Automated test suite with 101 passing tests across 11 suites (100% pass rate).
+- [x] Automated test suite with 106 passing tests across 11 suites (100% pass rate).
 - [x] WCAG 2.2 Level AA accessibility compliance across all modals, tables, landmarks, and icon buttons.
 - [x] Comprehensive data security with CWE-1236 CSV formula injection defense and RFC 4180 parsing.
 - [x] Robust runtime type guards for all data models and roles.

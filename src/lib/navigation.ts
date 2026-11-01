@@ -79,7 +79,7 @@ export const NAVIGATION_ITEMS: NavItem[] = [
  */
 export const ORGANIZER_NAVIGATION_ITEMS: NavItem[] = [
   {
-    name: "Dashboard",
+    name: "Overview",
     href: "/dashboard",
     icon: LayoutDashboard,
   },
@@ -89,15 +89,20 @@ export const ORGANIZER_NAVIGATION_ITEMS: NavItem[] = [
     icon: CalendarDays,
   },
   {
-    name: "Event Planner",
-    href: "/planner",
+    name: "Create Event",
+    href: "/events/new",
     icon: Sparkles,
-    badge: "AI",
+    badge: "New",
   },
   {
-    name: "Guest List & RSVP",
+    name: "Guest Management",
     href: "/guests",
     icon: Users,
+  },
+  {
+    name: "Invitations",
+    href: "/invitations",
+    icon: Mail,
   },
   {
     name: "Seating Planner",
@@ -105,30 +110,30 @@ export const ORGANIZER_NAVIGATION_ITEMS: NavItem[] = [
     icon: Armchair,
   },
   {
-    name: "Invitations & QR",
-    href: "/invitations",
-    icon: Mail,
-  },
-  {
-    name: "Control Center",
-    href: "/control-center",
-    icon: Radio,
-    badge: "Live",
-  },
-  {
-    name: "Budget Ledger",
+    name: "Budget Overview",
     href: "/budget",
     icon: PieChart,
   },
   {
-    name: "Vendor Management",
+    name: "Vendor Directory",
     href: "/vendors",
     icon: Briefcase,
   },
   {
-    name: "Timeline & Runsheet",
+    name: "Vendor Payments",
+    href: "/vendors?tab=payments",
+    icon: DollarSign,
+  },
+  {
+    name: "Timeline and Tasks",
     href: "/timeline",
     icon: CheckSquare,
+  },
+  {
+    name: "Event-Day Control Center",
+    href: "/control-center",
+    icon: Radio,
+    badge: "Live",
   },
   {
     name: "Venue Layout",
@@ -141,22 +146,22 @@ export const ORGANIZER_NAVIGATION_ITEMS: NavItem[] = [
     icon: ShieldAlert,
   },
   {
-    name: "Volunteers",
+    name: "Volunteer Management",
     href: "/volunteers",
     icon: HeartHandshake,
   },
   {
-    name: "Documents Vault",
+    name: "Documents",
     href: "/documents",
     icon: FileText,
   },
   {
-    name: "Analytics & Reports",
+    name: "Analytics and Reports",
     href: "/analytics",
     icon: BarChart3,
   },
   {
-    name: "Settings & Backup",
+    name: "Settings",
     href: "/settings",
     icon: Settings,
   },
@@ -167,20 +172,30 @@ export const ORGANIZER_NAVIGATION_ITEMS: NavItem[] = [
  */
 export const COORDINATOR_NAVIGATION_ITEMS: NavItem[] = [
   {
+    name: "Overview",
+    href: "/dashboard/coordinator",
+    icon: LayoutDashboard,
+  },
+  {
     name: "Assigned Events",
     href: "/events",
     icon: CalendarDays,
   },
   {
-    name: "Control Center",
+    name: "My Tasks",
+    href: "/timeline",
+    icon: CheckSquare,
+  },
+  {
+    name: "Event Schedule",
+    href: "/control-center?tab=schedule",
+    icon: CalendarClock,
+  },
+  {
+    name: "Event-Day Control Center",
     href: "/control-center",
     icon: Radio,
     badge: "Live",
-  },
-  {
-    name: "My Tasks & Runsheet",
-    href: "/timeline",
-    icon: CheckSquare,
   },
   {
     name: "Guest Check-in",
@@ -193,13 +208,23 @@ export const COORDINATOR_NAVIGATION_ITEMS: NavItem[] = [
     icon: Briefcase,
   },
   {
+    name: "Volunteer Management",
+    href: "/volunteers",
+    icon: HeartHandshake,
+  },
+  {
     name: "Emergency Contacts",
     href: "/emergency-contacts",
     icon: PhoneCall,
-    badge: "Sos",
+    badge: "SOS",
   },
   {
-    name: "Settings",
+    name: "Issue Reporting",
+    href: "/control-center?tab=issues",
+    icon: ShieldAlert,
+  },
+  {
+    name: "My Profile",
     href: "/settings",
     icon: Settings,
   },
@@ -210,22 +235,37 @@ export const COORDINATOR_NAVIGATION_ITEMS: NavItem[] = [
  */
 export const VENDOR_NAVIGATION_ITEMS: NavItem[] = [
   {
-    name: "Vendor Profile",
+    name: "Overview",
+    href: "/dashboard/vendor",
+    icon: LayoutDashboard,
+  },
+  {
+    name: "My Profile",
     href: "/vendors?tab=profile",
     icon: Briefcase,
   },
   {
-    name: "My Bookings & Quotes",
+    name: "My Bookings",
     href: "/vendors?tab=quotes",
     icon: ClipboardList,
   },
   {
-    name: "Contracts & Payments",
+    name: "Quotations",
+    href: "/vendors?tab=quotes",
+    icon: FileText,
+  },
+  {
+    name: "Contracts",
     href: "/vendors?tab=contracts",
+    icon: FileText,
+  },
+  {
+    name: "Payment Information",
+    href: "/vendors?tab=payments",
     icon: DollarSign,
   },
   {
-    name: "Event Runsheet",
+    name: "Service Schedule",
     href: "/timeline",
     icon: CalendarClock,
   },
@@ -233,6 +273,11 @@ export const VENDOR_NAVIGATION_ITEMS: NavItem[] = [
     name: "Live Control Center",
     href: "/control-center",
     icon: Radio,
+  },
+  {
+    name: "Documents",
+    href: "/documents",
+    icon: FileText,
   },
   {
     name: "Settings",
@@ -246,20 +291,20 @@ export const VENDOR_NAVIGATION_ITEMS: NavItem[] = [
  */
 export const GUEST_NAVIGATION_ITEMS: NavItem[] = [
   {
-    name: "My Invitation & RSVP",
+    name: "Overview",
+    href: "/dashboard/guest",
+    icon: LayoutDashboard,
+  },
+  {
+    name: "My Invitations",
     href: "/invitations?view=guest",
     icon: Mail,
     badge: "RSVP",
   },
   {
-    name: "Digital QR Pass",
-    href: "/check-in?view=pass",
-    icon: QrCode,
-  },
-  {
-    name: "My Seating Table",
-    href: "/seating?view=guest",
-    icon: Armchair,
+    name: "RSVP",
+    href: "/guests?view=rsvp",
+    icon: CheckSquare,
   },
   {
     name: "Event Details",
@@ -267,7 +312,17 @@ export const GUEST_NAVIGATION_ITEMS: NavItem[] = [
     icon: CalendarDays,
   },
   {
-    name: "Guest Profile",
+    name: "My Seating",
+    href: "/seating?view=guest",
+    icon: Armchair,
+  },
+  {
+    name: "QR Pass",
+    href: "/check-in?view=pass",
+    icon: QrCode,
+  },
+  {
+    name: "My Profile",
     href: "/settings",
     icon: Settings,
   },

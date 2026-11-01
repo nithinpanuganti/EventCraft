@@ -47,6 +47,7 @@ export type DocumentCategory = "CONTRACT" | "INVOICE" | "RECEIPT" | "PERMIT" | "
 export interface LocalProfile {
   id: string;
   name: string;
+  username?: string;
   email: string;
   role?: UserRole;
   passcodeHash?: string;

@@ -20,7 +20,10 @@ import {
   createLocalRisk,
   exportLocalGuestsToCsv,
   importLocalGuestsFromCsv,
+  authenticateLocalProfile,
+  DEMO_CREDENTIALS,
 } from "./local-repository";
+import { canAccessRoute, getRoleDefaultDashboard, canPerformAction } from "../permissions";
 import { generateIcsCalendar } from "../calendar/ics-export";
 import { LocalEvent, LocalGuest } from "./types";
 
@@ -67,17 +70,17 @@ describe("Demo System Seeder & 21-Store Hydration", () => {
 
   it("seeds 4 demo profiles (Organizer, Coordinator, Vendor, Guest) and linked data", async () => {
     const result = await seedDemoAccountsAndEvents();
-    expect(result.organizer.name).toBe("Elena Rostova");
-    expect(result.coordinator.name).toBe("Marcus Vance");
-    expect(result.vendor.name).toBe("Julian Cole (Apex Sound)");
-    expect(result.guest.name).toBe("Dr. Sophia Lin");
+    expect(result.organizer.name).toBe("Olivia Organizer");
+    expect(result.coordinator.name).toBe("Ethan Coordinator");
+    expect(result.vendor.name).toBe("Sophia Vendor");
+    expect(result.guest.name).toBe("Liam Guest");
 
     const profiles = await getLocalProfiles();
     expect(profiles.length).toBe(4);
-    expect(profiles.some((p) => p.role === "ORGANIZER" && p.name === "Elena Rostova")).toBe(true);
-    expect(profiles.some((p) => p.role === "COORDINATOR" && p.name === "Marcus Vance")).toBe(true);
-    expect(profiles.some((p) => p.role === "VENDOR" && p.name === "Julian Cole (Apex Sound)")).toBe(true);
-    expect(profiles.some((p) => p.role === "GUEST" && p.name === "Dr. Sophia Lin")).toBe(true);
+    expect(profiles.some((p) => p.role === "ORGANIZER" && p.name === "Olivia Organizer")).toBe(true);
+    expect(profiles.some((p) => p.role === "COORDINATOR" && p.name === "Ethan Coordinator")).toBe(true);
+    expect(profiles.some((p) => p.role === "VENDOR" && p.name === "Sophia Vendor")).toBe(true);
+    expect(profiles.some((p) => p.role === "GUEST" && p.name === "Liam Guest")).toBe(true);
 
     const events = await listLocalEvents();
     expect(events.length).toBeGreaterThan(0);
@@ -196,5 +199,122 @@ describe("Calendar .ICS Generator", () => {
     expect(ics).toContain("SUMMARY:Gala Evening Celebration");
     expect(ics).toContain("LOCATION:Grand Ballroom");
     expect(ics).toContain("END:VCALENDAR");
+  });
+});
+
+describe("Role-Based Access Control & Route Guarding", () => {
+  it("enforces route permissions across all 4 roles", () => {
+    // Public routes accessible by all roles
+    expect(canAccessRoute("GUEST", "/login")).toBe(true);
+    expect(canAccessRoute("COORDINATOR", "/login/coordinator")).toBe(true);
+    expect(canAccessRoute("VENDOR", "/login/vendor")).toBe(true);
+    expect(canAccessRoute("ORGANIZER", "/register")).toBe(true);
+
+    // Organizer has full module scope
+    expect(canAccessRoute("ORGANIZER", "/dashboard")).toBe(true);
+    expect(canAccessRoute("ORGANIZER", "/budget")).toBe(true);
+    expect(canAccessRoute("ORGANIZER", "/analytics")).toBe(true);
+    expect(canAccessRoute("ORGANIZER", "/guests")).toBe(true);
+
+    // Coordinator restricted from budget & analytics
+    expect(canAccessRoute("COORDINATOR", "/dashboard/coordinator")).toBe(true);
+    expect(canAccessRoute("COORDINATOR", "/control-center")).toBe(true);
+    expect(canAccessRoute("COORDINATOR", "/check-in")).toBe(true);
+    expect(canAccessRoute("COORDINATOR", "/budget")).toBe(false);
+    expect(canAccessRoute("COORDINATOR", "/analytics")).toBe(false);
+
+    // Vendor restricted from budget, guests, risks
+    expect(canAccessRoute("VENDOR", "/dashboard/vendor")).toBe(true);
+    expect(canAccessRoute("VENDOR", "/vendors")).toBe(true);
+    expect(canAccessRoute("VENDOR", "/budget")).toBe(false);
+    expect(canAccessRoute("VENDOR", "/guests")).toBe(false);
+    expect(canAccessRoute("VENDOR", "/risks")).toBe(false);
+
+    // Guest restricted from back-of-house planning
+    expect(canAccessRoute("GUEST", "/dashboard/guest")).toBe(true);
+    expect(canAccessRoute("GUEST", "/invitations")).toBe(true);
+    expect(canAccessRoute("GUEST", "/budget")).toBe(false);
+    expect(canAccessRoute("GUEST", "/vendors")).toBe(false);
+    expect(canAccessRoute("GUEST", "/control-center")).toBe(false);
+  });
+
+  it("determines correct default dashboard per role", () => {
+    expect(getRoleDefaultDashboard("ORGANIZER")).toBe("/dashboard/organizer");
+    expect(getRoleDefaultDashboard("COORDINATOR")).toBe("/dashboard/coordinator");
+    expect(getRoleDefaultDashboard("VENDOR")).toBe("/dashboard/vendor");
+    expect(getRoleDefaultDashboard("GUEST")).toBe("/dashboard/guest");
+  });
+
+  it("evaluates operational action permissions correctly", () => {
+    expect(canPerformAction("ORGANIZER", "budget:manage")).toBe(true);
+    expect(canPerformAction("COORDINATOR", "budget:manage")).toBe(false);
+    expect(canPerformAction("COORDINATOR", "control_center:operate")).toBe(true);
+    expect(canPerformAction("VENDOR", "vendors:submit_quotes")).toBe(true);
+    expect(canPerformAction("VENDOR", "guests:manage_all")).toBe(false);
+    expect(canPerformAction("GUEST", "guests:self_rsvp")).toBe(true);
+    expect(canPerformAction("GUEST", "events:create")).toBe(false);
+  });
+});
+
+describe("Demonstration Authentication & Account Validation", () => {
+  beforeEach(async () => {
+    await resetAllLocalData();
+  });
+
+  it("authenticates all 4 demo users with correct passwords", async () => {
+    await seedDemoAccountsAndEvents();
+
+    // Organizer: Olivia Organizer
+    const orgAuth = await authenticateLocalProfile(
+      "ORGANIZER",
+      DEMO_CREDENTIALS.ORGANIZER.username,
+      DEMO_CREDENTIALS.ORGANIZER.password
+    );
+    expect(orgAuth.success).toBe(true);
+    expect(orgAuth.profile?.name).toBe("Olivia Organizer");
+
+    // Coordinator: Ethan Coordinator
+    const coordAuth = await authenticateLocalProfile(
+      "COORDINATOR",
+      DEMO_CREDENTIALS.COORDINATOR.username,
+      DEMO_CREDENTIALS.COORDINATOR.password
+    );
+    expect(coordAuth.success).toBe(true);
+    expect(coordAuth.profile?.name).toBe("Ethan Coordinator");
+
+    // Vendor: Sophia Vendor
+    const vendorAuth = await authenticateLocalProfile(
+      "VENDOR",
+      DEMO_CREDENTIALS.VENDOR.username,
+      DEMO_CREDENTIALS.VENDOR.password
+    );
+    expect(vendorAuth.success).toBe(true);
+    expect(vendorAuth.profile?.name).toBe("Sophia Vendor");
+
+    // Guest: Liam Guest
+    const guestAuth = await authenticateLocalProfile(
+      "GUEST",
+      DEMO_CREDENTIALS.GUEST.username,
+      DEMO_CREDENTIALS.GUEST.password
+    );
+    expect(guestAuth.success).toBe(true);
+    expect(guestAuth.profile?.name).toBe("Liam Guest");
+  });
+
+  it("rejects invalid passwords and mismatched roles", async () => {
+    await seedDemoAccountsAndEvents();
+
+    // Wrong password
+    const failPass = await authenticateLocalProfile("ORGANIZER", "organizer.demo", "wrongpassword123");
+    expect(failPass.success).toBe(false);
+    expect(failPass.error).toContain("Invalid password");
+
+    // Non-existent username
+    const failUser = await authenticateLocalProfile("ORGANIZER", "nonexistent.user", "test1234");
+    expect(failUser.success).toBe(false);
+
+    // Mismatched role (using coordinator credentials on organizer portal)
+    const failRole = await authenticateLocalProfile("ORGANIZER", "coordinator.demo", "coordinator123");
+    expect(failRole.success).toBe(false);
   });
 });

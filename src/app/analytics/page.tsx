@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, useMemo, Suspense } from "react";
 import { useAuth } from "@/components/layout/AuthContext";
 import {
   LocalEvent,
   LocalGuest,
   LocalTask,
   LocalVendorContract,
+  LocalVendorPayment,
   LocalRisk,
   LocalEventIssue,
   LocalExpense,
@@ -16,6 +17,7 @@ import {
   getLocalEvent,
   getLocalGuests,
   getLocalVendorContracts,
+  getLocalVendorPayments,
   getLocalRisks,
   getLocalEventIssues,
 } from "@/lib/storage/local-repository";
@@ -24,12 +26,16 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import {
+  BarChart3,
+  PieChart,
   FileText,
   Download,
   Printer,
+  Calendar,
   Users,
   CheckCircle2,
   DollarSign,
+  AlertTriangle,
   FileCheck,
   ShieldAlert,
   Sparkles,
@@ -100,9 +106,10 @@ function AnalyticsContent() {
   const [tasks, setTasks] = useState<LocalTask[]>([]);
   const [expenses, setExpenses] = useState<LocalExpense[]>([]);
   const [contracts, setContracts] = useState<LocalVendorContract[]>([]);
+  const [payments, setPayments] = useState<LocalVendorPayment[]>([]);
   const [risks, setRisks] = useState<LocalRisk[]>([]);
   const [issues, setIssues] = useState<LocalEventIssue[]>([]);
-  const [, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   // Active Report
   const [selectedReport, setSelectedReport] = useState<ReportType>("EXECUTIVE_SUMMARY");
@@ -128,10 +135,11 @@ function AnalyticsContent() {
     if (!eventId) return;
     try {
       setLoading(true);
-      const [evtDetails, gList, cList, rList, iList] = await Promise.all([
+      const [evtDetails, gList, cList, pList, rList, iList] = await Promise.all([
         getLocalEvent(eventId),
         getLocalGuests(eventId),
         getLocalVendorContracts(eventId),
+        getLocalVendorPayments(eventId),
         getLocalRisks(eventId),
         getLocalEventIssues(eventId),
       ]);
@@ -143,6 +151,7 @@ function AnalyticsContent() {
       }
       setGuests(gList);
       setContracts(cList);
+      setPayments(pList);
       setRisks(rList);
       setIssues(iList);
     } catch (err) {
@@ -323,11 +332,10 @@ function AnalyticsContent() {
               key={rpt.id}
               type="button"
               onClick={() => setSelectedReport(rpt.id)}
-              className={`p-3 rounded-2xl border text-left transition-all flex flex-col justify-between ${
-                isSelected
-                  ? "bg-primary-500/15 border-primary-500 ring-2 ring-primary-500/30 text-surface-900 shadow-glass-subtle"
-                  : "glass-surface-subtle border-white/60 dark:border-white/10 hover:border-primary-400/40 text-surface-600"
-              }`}
+              className={`p-3 rounded-2xl border text-left transition-all flex flex-col justify-between ${isSelected
+                ? "bg-primary-500/15 border-primary-500 ring-2 ring-primary-500/30 text-surface-900 shadow-glass-subtle"
+                : "glass-surface-subtle border-white/60 dark:border-white/10 hover:border-primary-400/40 text-surface-600"
+                }`}
             >
               <div className="flex items-center gap-1.5 mb-2">
                 <Icon className="h-4 w-4 text-primary-600 dark:text-primary-400" />
@@ -583,4 +591,3 @@ export default function AnalyticsPage() {
     </Suspense>
   );
 }
-

@@ -482,16 +482,18 @@ function RisksContent() {
                         <button
                           type="button"
                           onClick={() => handleOpenEdit(risk)}
-                          className="p-1 rounded text-surface-400 hover:text-primary-600"
+                          aria-label={`Edit risk: ${risk.title}`}
+                          className="p-1 rounded text-surface-400 hover:text-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-500"
                         >
-                          <Edit2 className="h-3.5 w-3.5" />
+                          <Edit2 className="h-3.5 w-3.5" aria-hidden="true" />
                         </button>
                         <button
                           type="button"
                           onClick={() => handleDeleteRisk(risk.id)}
-                          className="p-1 rounded text-surface-400 hover:text-rose-500"
+                          aria-label={`Delete risk: ${risk.title}`}
+                          className="p-1 rounded text-surface-400 hover:text-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-500"
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
+                          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                         </button>
                       </div>
                     </div>
@@ -528,7 +530,7 @@ function RisksContent() {
               })
             ) : (
               <Card variant="subtle" className="p-10 text-center space-y-2">
-                <ShieldCheck className="h-8 w-8 text-emerald-500 mx-auto opacity-70" />
+                <ShieldCheck className="h-8 w-8 text-emerald-500 mx-auto opacity-70" aria-hidden="true" />
                 <h3 className="text-sm font-bold text-surface-900">No Risks In Current Filter</h3>
                 <p className="text-xs text-surface-500">
                   Select a different matrix cell or identify a new event risk.
@@ -541,18 +543,27 @@ function RisksContent() {
 
       {/* Add / Edit Modal */}
       {isAddEditOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="risk-modal-title"
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setIsAddEditOpen(false);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in"
+        >
           <div className="w-full max-w-lg glass-surface rounded-3xl p-6 border border-white/60 dark:border-white/10 shadow-glass-xl space-y-4">
             <div className="flex items-center justify-between border-b border-surface-200/50 dark:border-surface-800/50 pb-3">
-              <h3 className="font-bold text-surface-900">
+              <h3 id="risk-modal-title" className="font-bold text-surface-900">
                 {editingRisk ? "Edit Risk Assessment" : "Identify Contingency Risk"}
               </h3>
               <button
                 type="button"
                 onClick={() => setIsAddEditOpen(false)}
-                className="p-1 rounded-md text-surface-400 hover:text-surface-700"
+                aria-label="Close dialog"
+                className="p-1 rounded-md text-surface-400 hover:text-surface-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
-                <X className="h-4 w-4" />
+                <X className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
 

@@ -35,13 +35,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           />
         </div>
 
+        {/* Skip to Main Content Link for Keyboard and Screen Reader Accessibility (WCAG 2.4.1) */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:rounded-xl focus:bg-primary-600 focus:px-4 focus:py-2.5 focus:text-sm focus:font-bold focus:text-white focus:shadow-glass-elevated focus:outline-none focus:ring-2 focus:ring-primary-300 transition-all"
+        >
+          Skip to main content
+        </a>
+
         {/* Desktop Navigation Sidebar */}
         <Sidebar />
 
         {/* Main Content Area */}
         <div className="flex flex-1 flex-col overflow-x-hidden min-w-0">
           <Header />
-          <main className="flex-1 px-4 py-8 sm:px-6 lg:px-8 max-w-7xl w-full mx-auto transition-opacity duration-200">
+          <main
+            id="main-content"
+            tabIndex={-1}
+            className="flex-1 px-4 py-8 sm:px-6 lg:px-8 max-w-7xl w-full mx-auto transition-opacity duration-200 outline-none"
+          >
             {children}
           </main>
         </div>

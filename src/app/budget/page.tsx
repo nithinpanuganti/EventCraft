@@ -514,13 +514,13 @@ function BudgetContent() {
                 <table className="w-full text-left text-xs">
                   <thead className="glass-table-thead text-surface-700 font-semibold border-b border-surface-200/70">
                     <tr>
-                      <th className="py-3 px-3.5">Category</th>
-                      <th className="py-3 px-3.5 text-right">Planned Allocation</th>
-                      <th className="py-3 px-3.5 text-right">Actual Spent</th>
-                      <th className="py-3 px-3.5 text-right">Remaining Balance</th>
-                      <th className="py-3 px-3.5 text-center">Utilization</th>
-                      <th className="py-3 px-3.5 text-center">Status</th>
-                      <th className="py-3 px-3.5 text-right">Actions</th>
+                      <th scope="col" className="py-3 px-3.5">Category</th>
+                      <th scope="col" className="py-3 px-3.5 text-right">Planned Allocation</th>
+                      <th scope="col" className="py-3 px-3.5 text-right">Actual Spent</th>
+                      <th scope="col" className="py-3 px-3.5 text-right">Remaining Balance</th>
+                      <th scope="col" className="py-3 px-3.5 text-center">Utilization</th>
+                      <th scope="col" className="py-3 px-3.5 text-center">Status</th>
+                      <th scope="col" className="py-3 px-3.5 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-surface-200/50">

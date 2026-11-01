@@ -148,14 +148,14 @@ export function RunSheetViewer({
         </div>
       ) : (
         <div className="glass-table-wrapper">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-left text-xs" aria-label="Day of Show Itinerary">
             <thead className="glass-table-thead text-surface-700 font-semibold border-b border-surface-200/70">
               <tr>
-                <th className="py-3 px-3.5 w-32">Time</th>
-                <th className="py-3 px-3.5">Activity</th>
-                <th className="py-3 px-3.5 w-44">Responsible Lead</th>
-                <th className="py-3 px-3.5">Notes & Logistics</th>
-                {isEditing && <th className="py-3 px-3.5 w-16 text-right">Actions</th>}
+                <th scope="col" className="py-3 px-3.5 w-32">Time</th>
+                <th scope="col" className="py-3 px-3.5">Activity</th>
+                <th scope="col" className="py-3 px-3.5 w-44">Responsible Lead</th>
+                <th scope="col" className="py-3 px-3.5">Notes & Logistics</th>
+                {isEditing && <th scope="col" className="py-3 px-3.5 w-16 text-right">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-200/50">

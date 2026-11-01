@@ -213,9 +213,8 @@ function CheckInContent() {
 
             <div className="flex items-center justify-center gap-2 text-xs">
               <div
-                className={`h-2.5 w-2.5 rounded-full ${
-                  myGuest.checkInStatus ? "bg-emerald-500" : "bg-amber-500 animate-pulse"
-                }`}
+                className={`h-2.5 w-2.5 rounded-full ${myGuest.checkInStatus ? "bg-emerald-500" : "bg-amber-500 animate-pulse"
+                  }`}
               />
               <span className="font-semibold text-surface-700">
                 {myGuest.checkInStatus ? "Checked In at Venue" : "Ready for Arrival Scan"}
@@ -354,9 +353,10 @@ function CheckInContent() {
           <button
             type="button"
             onClick={() => setLastCheckedGuest(null)}
-            className="p-1 text-surface-400 hover:text-surface-700"
+            aria-label="Dismiss check-in alert"
+            className="p-1 text-surface-400 hover:text-surface-700 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded"
           >
-            <X className="h-4 w-4" />
+            <X className="h-4 w-4" aria-hidden="true" />
           </button>
         </Card>
       )}
@@ -364,16 +364,16 @@ function CheckInContent() {
       {/* Guest Check-in Roster Table */}
       <Card variant="elevated" className="overflow-hidden specular-top">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-left text-xs" aria-label="Attendee Check-in Roster">
             <thead className="bg-surface-500/5 border-b border-surface-200/50 dark:border-surface-800/50 uppercase tracking-wider text-[11px] text-surface-500 font-semibold">
               <tr>
-                <th className="py-3 px-4">Attendee</th>
-                <th className="py-3 px-4">Category</th>
-                <th className="py-3 px-4">Party Size</th>
-                <th className="py-3 px-4">Table Seating</th>
-                <th className="py-3 px-4">Special Meals</th>
-                <th className="py-3 px-4 text-center">Arrival Status</th>
-                <th className="py-3 px-4 text-right">Quick Action</th>
+                <th scope="col" className="py-3 px-4">Attendee</th>
+                <th scope="col" className="py-3 px-4">Category</th>
+                <th scope="col" className="py-3 px-4">Party Size</th>
+                <th scope="col" className="py-3 px-4">Table Seating</th>
+                <th scope="col" className="py-3 px-4">Special Meals</th>
+                <th scope="col" className="py-3 px-4 text-center">Arrival Status</th>
+                <th scope="col" className="py-3 px-4 text-right">Quick Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-200/40 dark:divide-surface-800/40">
@@ -416,11 +416,10 @@ function CheckInContent() {
 
                       <td className="py-3.5 px-4 text-center">
                         <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                            g.checkInStatus
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${g.checkInStatus
                               ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
                               : "bg-surface-500/15 text-surface-500"
-                          }`}
+                            }`}
                         >
                           {g.checkInStatus ? "Arrived" : "Pending"}
                         </span>
@@ -468,4 +467,3 @@ export default function CheckInPage() {
     </Suspense>
   );
 }
-

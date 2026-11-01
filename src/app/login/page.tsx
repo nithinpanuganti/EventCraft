@@ -281,11 +281,12 @@ function LoginContent() {
             />
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-surface-700 block">
+              <label htmlFor="login-passcode" className="text-xs font-semibold text-surface-700 block">
                 Local Passcode (Simulated)
               </label>
               <div className="relative">
                 <input
+                  id="login-passcode"
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={passwordInput}
@@ -295,10 +296,10 @@ function LoginContent() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-700 p-1"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-700 p-1 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded"
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
                 </button>
               </div>
               <p className="text-[11px] text-surface-500 flex items-center gap-1">

@@ -55,7 +55,11 @@ export function Header() {
             aria-label="Toggle navigation menu"
             aria-expanded={isMobileMenuOpen}
           >
-            {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            {isMobileMenuOpen ? (
+              <X className="h-5 w-5" aria-hidden="true" />
+            ) : (
+              <Menu className="h-5 w-5" aria-hidden="true" />
+            )}
           </button>
 
           <div className="flex items-center gap-2">

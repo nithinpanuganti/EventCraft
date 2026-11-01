@@ -761,10 +761,11 @@ function VendorsContent() {
                           <button
                             type="button"
                             onClick={() => handleDeleteContract(contract.id)}
-                            className="p-1.5 text-surface-400 hover:text-rose-500 rounded-lg"
+                            className="p-1.5 text-surface-400 hover:text-rose-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500"
                             title="Delete Contract"
+                            aria-label={`Delete contract ${contract.contractNumber}`}
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                           </button>
                         </div>
                       </Card>
@@ -803,17 +804,17 @@ function VendorsContent() {
               {/* Payments Table */}
               <Card variant="elevated" className="overflow-hidden specular-top">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
+                  <table className="w-full text-left text-xs" aria-label="Vendor Payment Disbursements">
                     <thead className="bg-surface-500/5 border-b border-surface-200/50 dark:border-surface-800/50 uppercase tracking-wider text-[11px] text-surface-500 font-semibold">
                       <tr>
-                        <th className="py-3 px-4">Receipt #</th>
-                        <th className="py-3 px-4">Vendor</th>
-                        <th className="py-3 px-4">Type</th>
-                        <th className="py-3 px-4">Amount</th>
-                        <th className="py-3 px-4">Method</th>
-                        <th className="py-3 px-4">Status</th>
-                        <th className="py-3 px-4">Date</th>
-                        <th className="py-3 px-4 text-right">Action</th>
+                        <th scope="col" className="py-3 px-4">Receipt #</th>
+                        <th scope="col" className="py-3 px-4">Vendor</th>
+                        <th scope="col" className="py-3 px-4">Type</th>
+                        <th scope="col" className="py-3 px-4">Amount</th>
+                        <th scope="col" className="py-3 px-4">Method</th>
+                        <th scope="col" className="py-3 px-4">Status</th>
+                        <th scope="col" className="py-3 px-4">Date</th>
+                        <th scope="col" className="py-3 px-4 text-right">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-surface-200/40 dark:divide-surface-800/40">
@@ -846,9 +847,11 @@ function VendorsContent() {
                                 <button
                                   type="button"
                                   onClick={() => handleDeletePayment(p.id)}
-                                  className="p-1 rounded text-surface-400 hover:text-rose-500"
+                                  className="p-1 rounded text-surface-400 hover:text-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                                  title="Delete Payment"
+                                  aria-label={`Delete payment ${p.receiptNumber || p.title || ""}`}
                                 >
-                                  <Trash2 className="h-3.5 w-3.5" />
+                                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                                 </button>
                               </td>
                             </tr>
@@ -872,16 +875,25 @@ function VendorsContent() {
 
       {/* New Contract Modal */}
       {isContractModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="contract-modal-title"
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setIsContractModalOpen(false);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in"
+        >
           <div className="w-full max-w-lg glass-surface rounded-3xl p-6 border border-white/60 dark:border-white/10 shadow-glass-xl space-y-4">
             <div className="flex items-center justify-between border-b border-surface-200/50 dark:border-surface-800/50 pb-3">
-              <h3 className="font-bold text-surface-900">Create Vendor Contract</h3>
+              <h3 id="contract-modal-title" className="font-bold text-surface-900">Create Vendor Contract</h3>
               <button
                 type="button"
                 onClick={() => setIsContractModalOpen(false)}
-                className="p-1 rounded-md text-surface-400 hover:text-surface-700"
+                aria-label="Close dialog"
+                className="p-1 rounded-md text-surface-400 hover:text-surface-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
-                <X className="h-4 w-4" />
+                <X className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
 
@@ -964,16 +976,25 @@ function VendorsContent() {
 
       {/* Record Payment Modal */}
       {isPaymentModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="record-payment-modal-title"
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setIsPaymentModalOpen(false);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in"
+        >
           <div className="w-full max-w-lg glass-surface rounded-3xl p-6 border border-white/60 dark:border-white/10 shadow-glass-xl space-y-4">
             <div className="flex items-center justify-between border-b border-surface-200/50 dark:border-surface-800/50 pb-3">
-              <h3 className="font-bold text-surface-900">Record Vendor Payment</h3>
+              <h3 id="record-payment-modal-title" className="font-bold text-surface-900">Record Vendor Payment</h3>
               <button
                 type="button"
                 onClick={() => setIsPaymentModalOpen(false)}
-                className="p-1 rounded-md text-surface-400 hover:text-surface-700"
+                aria-label="Close dialog"
+                className="p-1 rounded-md text-surface-400 hover:text-surface-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
-                <X className="h-4 w-4" />
+                <X className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
 

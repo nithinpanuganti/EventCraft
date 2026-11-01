@@ -1104,6 +1104,61 @@ export async function checkInGuest(
   };
 }
 
+/**
+ * Sanitizes a CSV cell to prevent CSV Formula Injection (CWE-1236).
+ * If the value starts with formula characters (=, +, -, @, tab, cr),
+ * it is prefixed with a single quote to force spreadsheet programs to treat it as raw text.
+ */
+export function sanitizeCsvCell(value: unknown): string {
+  if (value === null || value === undefined) return '""';
+  let str = String(value);
+  // Check for CSV formula injection triggers
+  if (/^[=+\-@\t\r]/.test(str)) {
+    str = "'" + str;
+  }
+  return `"${str.replace(/"/g, '""')}"`;
+}
+
+/**
+ * Robust RFC 4180 compliant CSV line parser.
+ * Handles quoted cells with embedded commas, quotes escaped as `""`, and trimmed values.
+ */
+export function parseCsvLine(line: string): string[] {
+  const fields: string[] = [];
+  let current = "";
+  let inQuotes = false;
+  let i = 0;
+
+  while (i < line.length) {
+    const char = line[i];
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i += 2;
+        continue;
+      }
+      inQuotes = !inQuotes;
+      i++;
+    } else if (char === "," && !inQuotes) {
+      fields.push(current.trim());
+      current = "";
+      i++;
+    } else {
+      current += char;
+      i++;
+    }
+  }
+  fields.push(current.trim());
+
+  // Strip formula sanitization quote if present
+  return fields.map((f) => {
+    if (f.startsWith("'") && /^[=+\-@]/.test(f.slice(1))) {
+      return f.slice(1);
+    }
+    return f;
+  });
+}
+
 export function exportLocalGuestsToCsv(guests: LocalGuest[]): string {
   const headers = [
     "Name",
@@ -1122,19 +1177,19 @@ export function exportLocalGuestsToCsv(guests: LocalGuest[]): string {
   ];
 
   const rows = guests.map((g) => [
-    `"${(g.name || "").replace(/"/g, '""')}"`,
-    `"${(g.email || "").replace(/"/g, '""')}"`,
-    `"${(g.phone || "").replace(/"/g, '""')}"`,
-    g.category,
-    g.rsvpStatus,
-    g.plusOneAllowed ? "Yes" : "No",
+    sanitizeCsvCell(g.name || ""),
+    sanitizeCsvCell(g.email || ""),
+    sanitizeCsvCell(g.phone || ""),
+    sanitizeCsvCell(g.category),
+    sanitizeCsvCell(g.rsvpStatus),
+    sanitizeCsvCell(g.plusOneAllowed ? "Yes" : "No"),
     g.plusOneCount,
-    `"${(g.plusOneNames || []).join("; ").replace(/"/g, '""')}"`,
-    `"${(g.dietaryPreferences || []).join("; ").replace(/"/g, '""')}"`,
-    `"${(g.accessibilityRequirements || "").replace(/"/g, '""')}"`,
-    `"${(g.groupName || "").replace(/"/g, '""')}"`,
-    g.checkInStatus ? "Yes" : "No",
-    `"${(g.notes || "").replace(/"/g, '""')}"`,
+    sanitizeCsvCell((g.plusOneNames || []).join("; ")),
+    sanitizeCsvCell((g.dietaryPreferences || []).join("; ")),
+    sanitizeCsvCell(g.accessibilityRequirements || ""),
+    sanitizeCsvCell(g.groupName || ""),
+    sanitizeCsvCell(g.checkInStatus ? "Yes" : "No"),
+    sanitizeCsvCell(g.notes || ""),
   ]);
 
   return [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
@@ -1156,7 +1211,7 @@ export async function importLocalGuestsFromCsv(
     const line = lines[i].trim();
     if (!line) continue;
 
-    const parts = line.split(",").map((p) => p.replace(/^"|"$/g, "").trim());
+    const parts = parseCsvLine(line);
     const name = parts[0];
     if (!name) {
       errors.push(`Row ${i + 1}: Name is required.`);
@@ -1165,12 +1220,16 @@ export async function importLocalGuestsFromCsv(
 
     const email = parts[1] || null;
     const phone = parts[2] || null;
-    const category = (["VIP", "FAMILY", "FRIENDS", "COLLEAGUES", "OTHER"].includes(parts[3]?.toUpperCase())
-      ? parts[3].toUpperCase()
+    const categoryUpper = (parts[3] || "").toUpperCase();
+    const category = (["VIP", "FAMILY", "FRIENDS", "COLLEAGUES", "OTHER"].includes(categoryUpper)
+      ? categoryUpper
       : "OTHER") as LocalGuest["category"];
-    const rsvpStatus = (["PENDING", "CONFIRMED", "DECLINED"].includes(parts[4]?.toUpperCase())
-      ? parts[4].toUpperCase()
+
+    const rsvpUpper = (parts[4] || "").toUpperCase();
+    const rsvpStatus = (["PENDING", "CONFIRMED", "DECLINED"].includes(rsvpUpper)
+      ? rsvpUpper
       : "PENDING") as LocalGuest["rsvpStatus"];
+
     const plusOneAllowed = parts[5]?.toLowerCase() === "yes" || parts[5] === "true";
     const plusOneCount = parseInt(parts[6] || "0", 10) || 0;
     const plusOneNames = parts[7] ? parts[7].split(";").map((s) => s.trim()).filter(Boolean) : [];
@@ -1526,21 +1585,37 @@ export async function getLocalRisks(eventId: string): Promise<LocalRisk[]> {
     .sort((a, b) => b.priorityScore - a.priorityScore);
 }
 
+/**
+ * Calculates deterministic 5x5 risk matrix priority score and level.
+ * Likelihood (1-5) and Severity (1-5) are clamped to the valid matrix boundaries.
+ */
+export function calculateRiskPriority(
+  likelihood: number,
+  severity: number
+): { score: number; level: LocalRisk["priorityLevel"] } {
+  const l = Math.max(1, Math.min(5, Math.round(likelihood)));
+  const s = Math.max(1, Math.min(5, Math.round(severity)));
+  const score = l * s;
+
+  let level: LocalRisk["priorityLevel"] = "LOW";
+  if (score >= 16) level = "CRITICAL";
+  else if (score >= 10) level = "HIGH";
+  else if (score >= 5) level = "MEDIUM";
+
+  return { score, level };
+}
+
 export async function createLocalRisk(
   params: Omit<LocalRisk, "id" | "createdAt" | "updatedAt" | "priorityScore" | "priorityLevel">
 ): Promise<LocalRisk> {
-  const score = params.likelihood * params.severity;
-  let priorityLevel: LocalRisk["priorityLevel"] = "LOW";
-  if (score >= 16) priorityLevel = "CRITICAL";
-  else if (score >= 10) priorityLevel = "HIGH";
-  else if (score >= 5) priorityLevel = "MEDIUM";
+  const { score, level } = calculateRiskPriority(params.likelihood, params.severity);
 
   const now = new Date().toISOString();
   const risk: LocalRisk = {
     ...params,
     id: generateId("rsk"),
     priorityScore: score,
-    priorityLevel,
+    priorityLevel: level,
     createdAt: now,
     updatedAt: now,
   };
@@ -1558,17 +1633,13 @@ export async function updateLocalRisk(
 
   const likelihood = updates.likelihood ?? existing.likelihood;
   const severity = updates.severity ?? existing.severity;
-  const score = likelihood * severity;
-  let priorityLevel: LocalRisk["priorityLevel"] = "LOW";
-  if (score >= 16) priorityLevel = "CRITICAL";
-  else if (score >= 10) priorityLevel = "HIGH";
-  else if (score >= 5) priorityLevel = "MEDIUM";
+  const { score, level } = calculateRiskPriority(likelihood, severity);
 
   const updated: LocalRisk = {
     ...existing,
     ...updates,
     priorityScore: score,
-    priorityLevel,
+    priorityLevel: level,
     updatedAt: new Date().toISOString(),
   };
   await dbPut("risks", updated);

@@ -737,17 +737,17 @@ function GuestsContent() {
       {/* Guest Table */}
       <Card variant="elevated" className="overflow-hidden specular-top">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-left text-xs" aria-label="Guest directory and RSVP roster">
             <thead className="bg-surface-500/5 border-b border-surface-200/50 dark:border-surface-800/50 uppercase tracking-wider text-[11px] text-surface-500 font-semibold">
               <tr>
-                <th className="py-3.5 px-4">Guest Name</th>
-                <th className="py-3.5 px-4">Category</th>
-                <th className="py-3.5 px-4">RSVP Status</th>
-                <th className="py-3.5 px-4">Plus-Ones</th>
-                <th className="py-3.5 px-4">Table / Seat</th>
-                <th className="py-3.5 px-4">Dietary Notes</th>
-                <th className="py-3.5 px-4 text-center">Check-In</th>
-                <th className="py-3.5 px-4 text-right">Actions</th>
+                <th scope="col" className="py-3.5 px-4">Guest Name</th>
+                <th scope="col" className="py-3.5 px-4">Category</th>
+                <th scope="col" className="py-3.5 px-4">RSVP Status</th>
+                <th scope="col" className="py-3.5 px-4">Plus-Ones</th>
+                <th scope="col" className="py-3.5 px-4">Table / Seat</th>
+                <th scope="col" className="py-3.5 px-4">Dietary Notes</th>
+                <th scope="col" className="py-3.5 px-4 text-center">Check-In</th>
+                <th scope="col" className="py-3.5 px-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-200/40 dark:divide-surface-800/40">
@@ -783,7 +783,7 @@ function GuestsContent() {
 
                       <td className="py-3.5 px-4">
                         <Badge variant={rBadge.variant} size="sm" className="inline-flex items-center gap-1">
-                          <RIcon className="h-3 w-3" />
+                          <RIcon className="h-3 w-3" aria-hidden="true" />
                           <span>{rBadge.label}</span>
                         </Badge>
                       </td>
@@ -795,7 +795,7 @@ function GuestsContent() {
                       <td className="py-3.5 px-4">
                         {tableName ? (
                           <div className="flex items-center gap-1.5 text-surface-800 font-medium">
-                            <Armchair className="h-3.5 w-3.5 text-primary-500" />
+                            <Armchair className="h-3.5 w-3.5 text-primary-500" aria-hidden="true" />
                             <span>{tableName}</span>
                             {guest.seatNumber && <span className="text-surface-400">#{guest.seatNumber}</span>}
                           </div>
@@ -818,14 +818,15 @@ function GuestsContent() {
                         <button
                           type="button"
                           onClick={() => handleToggleCheckIn(guest.id, guest.checkInStatus)}
-                          className={`p-1.5 rounded-lg border transition-all ${
+                          className={`p-1.5 rounded-lg border transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
                             guest.checkInStatus
                               ? "bg-emerald-500 text-white border-emerald-600 shadow-sm"
                               : "glass-surface-subtle border-surface-300 dark:border-surface-700 text-surface-400 hover:text-emerald-500"
                           }`}
                           title={guest.checkInStatus ? "Checked In (Click to Undo)" : "Mark as Checked In"}
+                          aria-label={guest.checkInStatus ? `Undo check-in for ${guest.name}` : `Check in ${guest.name}`}
                         >
-                          <CheckCircle2 className="h-4 w-4" />
+                          <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
                         </button>
                       </td>
 
@@ -834,26 +835,29 @@ function GuestsContent() {
                           <button
                             type="button"
                             onClick={() => setViewingGuest(guest)}
-                            className="p-1 rounded-md text-surface-400 hover:text-surface-800"
+                            className="p-1 rounded-md text-surface-400 hover:text-surface-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
                             title="View Details"
+                            aria-label={`View details for ${guest.name}`}
                           >
-                            <Users className="h-3.5 w-3.5" />
+                            <Users className="h-3.5 w-3.5" aria-hidden="true" />
                           </button>
                           <button
                             type="button"
                             onClick={() => handleOpenEdit(guest)}
-                            className="p-1 rounded-md text-surface-400 hover:text-primary-600"
+                            className="p-1 rounded-md text-surface-400 hover:text-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-500"
                             title="Edit Guest"
+                            aria-label={`Edit ${guest.name}`}
                           >
-                            <Edit2 className="h-3.5 w-3.5" />
+                            <Edit2 className="h-3.5 w-3.5" aria-hidden="true" />
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDelete(guest.id, guest.name)}
-                            className="p-1 rounded-md text-surface-400 hover:text-rose-500"
+                            className="p-1 rounded-md text-surface-400 hover:text-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-500"
                             title="Delete Guest"
+                            aria-label={`Delete ${guest.name}`}
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                           </button>
                         </div>
                       </td>
@@ -876,18 +880,27 @@ function GuestsContent() {
 
       {/* Add / Edit Guest Modal */}
       {isAddEditOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="add-guest-modal-title"
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setIsAddEditOpen(false);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in"
+        >
           <div className="w-full max-w-lg glass-surface rounded-3xl p-6 sm:p-7 border border-white/60 dark:border-white/10 shadow-glass-xl space-y-5">
             <div className="flex items-center justify-between border-b border-surface-200/50 dark:border-surface-800/50 pb-3">
-              <h3 className="text-lg font-bold text-surface-900">
+              <h3 id="add-guest-modal-title" className="text-lg font-bold text-surface-900">
                 {editingGuest ? "Edit Guest Record" : "Add New Guest"}
               </h3>
               <button
                 type="button"
                 onClick={() => setIsAddEditOpen(false)}
-                className="p-1.5 rounded-lg text-surface-400 hover:text-surface-700"
+                aria-label="Close dialog"
+                className="p-1.5 rounded-lg text-surface-400 hover:text-surface-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
-                <X className="h-4 w-4" />
+                <X className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
 
@@ -1017,7 +1030,15 @@ function GuestsContent() {
 
       {/* View Guest Details Modal */}
       {viewingGuest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="view-guest-modal-title"
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setViewingGuest(null);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in"
+        >
           <div className="w-full max-w-md glass-surface rounded-3xl p-6 border border-white/60 dark:border-white/10 shadow-glass-xl space-y-4">
             <div className="flex items-center justify-between border-b border-surface-200/50 dark:border-surface-800/50 pb-3">
               <div className="flex items-center gap-2">
@@ -1025,16 +1046,17 @@ function GuestsContent() {
                   {viewingGuest.name.charAt(0)}
                 </div>
                 <div>
-                  <h3 className="font-bold text-surface-900">{viewingGuest.name}</h3>
+                  <h3 id="view-guest-modal-title" className="font-bold text-surface-900">{viewingGuest.name}</h3>
                   <div className="text-xs text-surface-500">{viewingGuest.email || "No email"}</div>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setViewingGuest(null)}
-                className="p-1 rounded-md text-surface-400 hover:text-surface-700"
+                aria-label="Close dialog"
+                className="p-1 rounded-md text-surface-400 hover:text-surface-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
-                <X className="h-4 w-4" />
+                <X className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
 

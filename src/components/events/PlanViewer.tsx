@@ -242,14 +242,14 @@ export function PlanViewer({
 
               {/* Category Table in Liquid Glass */}
               <div className="glass-table-wrapper">
-                <table className="w-full text-left text-xs">
+                <table className="w-full text-left text-xs" aria-label="Budget Allocation Blueprint">
                   <thead className="glass-table-thead text-surface-700 font-semibold uppercase tracking-wider text-[10px]">
                     <tr>
-                      <th className="py-3 px-4">Category</th>
-                      <th className="py-3 px-4">Allocation %</th>
-                      <th className="py-3 px-4">Allocated Cap</th>
-                      <th className="py-3 px-4">Estimated Range</th>
-                      <th className="py-3 px-4">Rationale</th>
+                      <th scope="col" className="py-3 px-4">Category</th>
+                      <th scope="col" className="py-3 px-4">Allocation %</th>
+                      <th scope="col" className="py-3 px-4">Allocated Cap</th>
+                      <th scope="col" className="py-3 px-4">Estimated Range</th>
+                      <th scope="col" className="py-3 px-4">Rationale</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-surface-200/50 text-surface-800">

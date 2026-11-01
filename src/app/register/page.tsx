@@ -219,11 +219,12 @@ function RegisterContent() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-surface-700 block">
+              <label htmlFor="register-passcode" className="text-xs font-semibold text-surface-700 block">
                 Local Passcode (Optional)
               </label>
               <div className="relative">
                 <input
+                  id="register-passcode"
                   type={showPassword ? "text" : "password"}
                   name="passcode"
                   placeholder="Set an optional local passcode"
@@ -234,10 +235,10 @@ function RegisterContent() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-700 p-1"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-700 p-1 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded"
                   aria-label={showPassword ? "Hide passcode" : "Show passcode"}
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
                 </button>
               </div>
               <p className="text-[11px] text-surface-500">

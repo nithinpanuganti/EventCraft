@@ -58,15 +58,15 @@ export function ExpenseTable({
 
   return (
     <div className="glass-table-wrapper">
-      <table className="w-full text-left text-xs">
+      <table className="w-full text-left text-xs" aria-label="Recorded Expenses Ledger">
         <thead className="glass-table-thead text-surface-700 font-semibold border-b border-surface-200/70">
           <tr>
-            <th className="py-3 px-3.5">Description</th>
-            <th className="py-3 px-3.5">Category</th>
-            <th className="py-3 px-3.5">Date</th>
-            <th className="py-3 px-3.5 text-right">Amount</th>
-            <th className="py-3 px-3.5 text-center">Status</th>
-            <th className="py-3 px-3.5 text-right">Actions</th>
+            <th scope="col" className="py-3 px-3.5">Description</th>
+            <th scope="col" className="py-3 px-3.5">Category</th>
+            <th scope="col" className="py-3 px-3.5">Date</th>
+            <th scope="col" className="py-3 px-3.5 text-right">Amount</th>
+            <th scope="col" className="py-3 px-3.5 text-center">Status</th>
+            <th scope="col" className="py-3 px-3.5 text-right">Actions</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-surface-200/50">
@@ -100,20 +100,22 @@ export function ExpenseTable({
                     variant="ghost"
                     size="sm"
                     onClick={() => onEdit(exp)}
-                    className="h-7 w-7 p-0 text-surface-400 hover:text-surface-900 rounded-lg"
+                    className="h-7 w-7 p-0 text-surface-400 hover:text-surface-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                     title="Edit expense"
+                    aria-label={`Edit expense ${exp.name}`}
                   >
-                    <Edit2 className="h-3.5 w-3.5" />
+                    <Edit2 className="h-3.5 w-3.5" aria-hidden="true" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => handleDelete(exp.id, exp.name)}
                     disabled={deletingId === exp.id}
-                    className="h-7 w-7 p-0 text-danger-500 hover:text-danger-700 hover:bg-danger-50/80 rounded-lg"
+                    className="h-7 w-7 p-0 text-danger-500 hover:text-danger-700 hover:bg-danger-50/80 rounded-lg focus:outline-none focus:ring-2 focus:ring-danger-500"
                     title="Delete expense"
+                    aria-label={`Delete expense ${exp.name}`}
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                   </Button>
                 </div>
               </td>

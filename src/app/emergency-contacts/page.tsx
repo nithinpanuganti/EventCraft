@@ -351,19 +351,21 @@ function EmergencyContactsContent() {
                   <button
                     type="button"
                     onClick={() => handleOpenEdit(contact)}
-                    className="p-2 text-surface-400 hover:text-surface-700 rounded-lg"
+                    className="p-2 text-surface-400 hover:text-surface-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                     title="Edit Contact"
+                    aria-label={`Edit ${contact.name}`}
                   >
-                    <Edit2 className="h-3.5 w-3.5" />
+                    <Edit2 className="h-3.5 w-3.5" aria-hidden="true" />
                   </button>
 
                   <button
                     type="button"
                     onClick={() => handleDelete(contact.id, contact.name)}
-                    className="p-2 text-surface-400 hover:text-rose-500 rounded-lg"
+                    className="p-2 text-surface-400 hover:text-rose-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500"
                     title="Delete Contact"
+                    aria-label={`Delete ${contact.name}`}
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                   </button>
                 </div>
               </Card>
@@ -371,7 +373,7 @@ function EmergencyContactsContent() {
           })
         ) : (
           <div className="col-span-3 py-12 text-center text-xs text-surface-400">
-            <PhoneCall className="h-10 w-10 mx-auto mb-2 opacity-50" />
+            <PhoneCall className="h-10 w-10 mx-auto mb-2 opacity-50" aria-hidden="true" />
             No emergency contacts listed. Click &ldquo;Add Emergency Contact&rdquo; to populate your safety directory.
           </div>
         )}
@@ -379,18 +381,27 @@ function EmergencyContactsContent() {
 
       {/* Add / Edit Contact Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="emergency-contact-modal-title"
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setIsModalOpen(false);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in"
+        >
           <div className="w-full max-w-md glass-surface rounded-3xl p-6 border border-white/60 dark:border-white/10 shadow-glass-xl space-y-4">
             <div className="flex items-center justify-between border-b border-surface-200/50 dark:border-surface-800/50 pb-3">
-              <h3 className="font-bold text-surface-900">
+              <h3 id="emergency-contact-modal-title" className="font-bold text-surface-900">
                 {targetContact ? "Edit Emergency Contact" : "Add Emergency Contact"}
               </h3>
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="p-1 rounded-md text-surface-400 hover:text-surface-700"
+                aria-label="Close dialog"
+                className="p-1 rounded-md text-surface-400 hover:text-surface-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
-                <X className="h-4 w-4" />
+                <X className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
 

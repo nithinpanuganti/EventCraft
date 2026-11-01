@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, Suspense } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useAuth } from "@/components/layout/AuthContext";
 import {
   LocalEvent,
@@ -26,16 +26,12 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import {
-  BarChart3,
-  PieChart,
   FileText,
   Download,
   Printer,
-  Calendar,
   Users,
   CheckCircle2,
   DollarSign,
-  AlertTriangle,
   FileCheck,
   ShieldAlert,
   Sparkles,
@@ -351,6 +347,11 @@ function AnalyticsContent() {
 
       {/* Render Selected Report Document */}
       <Card variant="elevated" className="p-6 sm:p-10 specular-top space-y-8">
+        {loading && (
+          <div className="text-xs text-primary-600 font-semibold animate-pulse pb-2" role="status" aria-live="polite">
+            Updating report metrics from local store...
+          </div>
+        )}
         {/* Report Document Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-surface-200/50 dark:border-surface-800/50 pb-6">
           <div className="space-y-1">
@@ -413,13 +414,13 @@ function AnalyticsContent() {
           <div className="space-y-4">
             <h3 className="font-bold text-sm text-surface-900">Expense Ledger Breakdown ({expenses.length})</h3>
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="w-full text-left text-xs" aria-label="Budget Expense Breakdown">
                 <thead className="bg-surface-500/5 uppercase text-surface-500 text-[10px] font-bold">
                   <tr>
-                    <th className="py-2.5 px-3">Expense Item</th>
-                    <th className="py-2.5 px-3">Category</th>
-                    <th className="py-2.5 px-3">Amount</th>
-                    <th className="py-2.5 px-3">Date</th>
+                    <th scope="col" className="py-2.5 px-3">Expense Item</th>
+                    <th scope="col" className="py-2.5 px-3">Category</th>
+                    <th scope="col" className="py-2.5 px-3">Amount</th>
+                    <th scope="col" className="py-2.5 px-3">Date</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-surface-200/40 dark:divide-surface-800/40">
@@ -446,14 +447,14 @@ function AnalyticsContent() {
           <div className="space-y-4">
             <h3 className="font-bold text-sm text-surface-900">Guest RSVP & Dietary Audit ({guests.length})</h3>
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="w-full text-left text-xs" aria-label="Guest Roster and Dietary Audit">
                 <thead className="bg-surface-500/5 uppercase text-surface-500 text-[10px] font-bold">
                   <tr>
-                    <th className="py-2.5 px-3">Guest Name</th>
-                    <th className="py-2.5 px-3">Category</th>
-                    <th className="py-2.5 px-3">RSVP Status</th>
-                    <th className="py-2.5 px-3">Party Size</th>
-                    <th className="py-2.5 px-3">Dietary Requirements</th>
+                    <th scope="col" className="py-2.5 px-3">Guest Name</th>
+                    <th scope="col" className="py-2.5 px-3">Category</th>
+                    <th scope="col" className="py-2.5 px-3">RSVP Status</th>
+                    <th scope="col" className="py-2.5 px-3">Party Size</th>
+                    <th scope="col" className="py-2.5 px-3">Dietary Requirements</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-surface-200/40 dark:divide-surface-800/40">
@@ -478,33 +479,70 @@ function AnalyticsContent() {
 
         {/* 4. VENDOR SETTLEMENT */}
         {selectedReport === "VENDOR_SETTLEMENT" && (
-          <div className="space-y-4">
-            <h3 className="font-bold text-sm text-surface-900">Vendor Contracts & Milestone Ledger ({contracts.length})</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-surface-500/5 uppercase text-surface-500 text-[10px] font-bold">
-                  <tr>
-                    <th className="py-2.5 px-3">Contract #</th>
-                    <th className="py-2.5 px-3">Title</th>
-                    <th className="py-2.5 px-3">Total Amount</th>
-                    <th className="py-2.5 px-3">Advance Paid</th>
-                    <th className="py-2.5 px-3">Balance Due</th>
-                    <th className="py-2.5 px-3">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-surface-200/40 dark:divide-surface-800/40">
-                  {contracts.map((c) => (
-                    <tr key={c.id}>
-                      <td className="py-2.5 px-3 font-bold">{c.contractNumber}</td>
-                      <td className="py-2.5 px-3 font-semibold">{c.title}</td>
-                      <td className="py-2.5 px-3 font-bold">{formatMoney(c.totalAmount, currentEvent?.currency || "USD")}</td>
-                      <td className="py-2.5 px-3 text-emerald-600">{formatMoney(c.advanceAmount, currentEvent?.currency || "USD")}</td>
-                      <td className="py-2.5 px-3 font-extrabold">{formatMoney(Math.max(0, c.totalAmount - c.advanceAmount), currentEvent?.currency || "USD")}</td>
-                      <td className="py-2.5 px-3">{c.status}</td>
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <h3 className="font-bold text-sm text-surface-900">Vendor Contracts & Milestone Ledger ({contracts.length})</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs" aria-label="Vendor Contracts Ledger">
+                  <thead className="bg-surface-500/5 uppercase text-surface-500 text-[10px] font-bold">
+                    <tr>
+                      <th scope="col" className="py-2.5 px-3">Contract #</th>
+                      <th scope="col" className="py-2.5 px-3">Title</th>
+                      <th scope="col" className="py-2.5 px-3">Total Amount</th>
+                      <th scope="col" className="py-2.5 px-3">Advance Paid</th>
+                      <th scope="col" className="py-2.5 px-3">Balance Due</th>
+                      <th scope="col" className="py-2.5 px-3">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-surface-200/40 dark:divide-surface-800/40">
+                    {contracts.map((c) => (
+                      <tr key={c.id}>
+                        <td className="py-2.5 px-3 font-bold">{c.contractNumber}</td>
+                        <td className="py-2.5 px-3 font-semibold">{c.title}</td>
+                        <td className="py-2.5 px-3 font-bold">{formatMoney(c.totalAmount, currentEvent?.currency || "USD")}</td>
+                        <td className="py-2.5 px-3 text-emerald-600">{formatMoney(c.advanceAmount, currentEvent?.currency || "USD")}</td>
+                        <td className="py-2.5 px-3 font-extrabold">{formatMoney(Math.max(0, c.totalAmount - c.advanceAmount), currentEvent?.currency || "USD")}</td>
+                        <td className="py-2.5 px-3">{c.status}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Payment Installments Ledger */}
+            <div className="space-y-4 pt-2 border-t border-surface-200/50 dark:border-surface-800/50">
+              <h3 className="font-bold text-sm text-surface-900">Recorded Payment Installments ({payments.length})</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs" aria-label="Recorded Vendor Payments">
+                  <thead className="bg-surface-500/5 uppercase text-surface-500 text-[10px] font-bold">
+                    <tr>
+                      <th scope="col" className="py-2.5 px-3">Payment Title</th>
+                      <th scope="col" className="py-2.5 px-3">Type</th>
+                      <th scope="col" className="py-2.5 px-3">Amount</th>
+                      <th scope="col" className="py-2.5 px-3">Method</th>
+                      <th scope="col" className="py-2.5 px-3">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-surface-200/40 dark:divide-surface-800/40">
+                    {payments.length > 0 ? (
+                      payments.map((p) => (
+                        <tr key={p.id}>
+                          <td className="py-2.5 px-3 font-semibold text-surface-900">{p.title}</td>
+                          <td className="py-2.5 px-3">{p.paymentType}</td>
+                          <td className="py-2.5 px-3 font-bold text-emerald-600">{formatMoney(p.amount, currentEvent?.currency || "USD")}</td>
+                          <td className="py-2.5 px-3 text-surface-500">{p.paymentMethod}</td>
+                          <td className="py-2.5 px-3 font-semibold">{p.status}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="py-4 text-center text-surface-400">No payment installments recorded yet</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
@@ -514,13 +552,13 @@ function AnalyticsContent() {
           <div className="space-y-4">
             <h3 className="font-bold text-sm text-surface-900">Timeline & Runsheet Task Execution ({tasks.length})</h3>
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="w-full text-left text-xs" aria-label="Timeline and Runsheet Task Execution">
                 <thead className="bg-surface-500/5 uppercase text-surface-500 text-[10px] font-bold">
                   <tr>
-                    <th className="py-2.5 px-3">Task Title</th>
-                    <th className="py-2.5 px-3">Status</th>
-                    <th className="py-2.5 px-3">Assigned Lead</th>
-                    <th className="py-2.5 px-3">Priority</th>
+                    <th scope="col" className="py-2.5 px-3">Task Title</th>
+                    <th scope="col" className="py-2.5 px-3">Status</th>
+                    <th scope="col" className="py-2.5 px-3">Assigned Lead</th>
+                    <th scope="col" className="py-2.5 px-3">Priority</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-surface-200/40 dark:divide-surface-800/40">

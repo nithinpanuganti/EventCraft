@@ -50,15 +50,15 @@ export function QuoteComparisonTable({
 
   return (
     <div className="glass-table-wrapper">
-      <table className="w-full text-left text-xs">
+      <table className="w-full text-left text-xs" aria-label="Vendor Quotation Comparison">
         <thead className="glass-table-thead text-surface-700 font-semibold border-b border-surface-200/70">
           <tr>
-            <th className="py-3 px-3.5">Vendor & Category</th>
-            <th className="py-3 px-3.5">Package / Scope</th>
-            <th className="py-3 px-3.5 text-right">Quoted Amount</th>
-            <th className="py-3 px-3.5">Valid Until</th>
-            <th className="py-3 px-3.5 text-center">Status</th>
-            <th className="py-3 px-3.5 text-right">Selection Action</th>
+            <th scope="col" className="py-3 px-3.5">Vendor & Category</th>
+            <th scope="col" className="py-3 px-3.5">Package / Scope</th>
+            <th scope="col" className="py-3 px-3.5 text-right">Quoted Amount</th>
+            <th scope="col" className="py-3 px-3.5">Valid Until</th>
+            <th scope="col" className="py-3 px-3.5 text-center">Status</th>
+            <th scope="col" className="py-3 px-3.5 text-right">Selection Action</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-surface-200/50">

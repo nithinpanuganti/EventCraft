@@ -349,14 +349,15 @@ function ControlCenterContent() {
                             isCompleted ? "TODO" : "COMPLETED"
                           )
                         }
-                        className={`h-7 w-7 rounded-lg border flex items-center justify-center transition-all ${
+                        className={`h-7 w-7 rounded-lg border flex items-center justify-center transition-all focus:outline-none focus:ring-2 focus:ring-primary-500 ${
                           isCompleted
                             ? "bg-emerald-500 border-emerald-600 text-white"
                             : "border-surface-300 dark:border-surface-700 text-transparent hover:text-surface-400"
                         }`}
                         title={isCompleted ? "Mark Incomplete" : "Mark Completed"}
+                        aria-label={isCompleted ? `Mark task ${task.title} as incomplete` : `Mark task ${task.title} as completed`}
                       >
-                        <Check className="h-4 w-4" />
+                        <Check className="h-4 w-4" aria-hidden="true" />
                       </button>
 
                       <div className="truncate">
@@ -500,9 +501,10 @@ function ControlCenterContent() {
                           <button
                             type="button"
                             onClick={() => handleDeleteIssue(issue.id)}
-                            className="text-surface-400 hover:text-rose-500 p-1"
+                            aria-label={`Dismiss incident: ${issue.title}`}
+                            className="text-surface-400 hover:text-rose-500 p-1 focus:outline-none focus:ring-2 focus:ring-rose-500 rounded"
                           >
-                            <X className="h-3 w-3" />
+                            <X className="h-3 w-3" aria-hidden="true" />
                           </button>
                         </div>
                       </div>
@@ -561,16 +563,25 @@ function ControlCenterContent() {
 
       {/* Log Issue Modal */}
       {isAddIssueOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="log-issue-modal-title"
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setIsAddIssueOpen(false);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in"
+        >
           <div className="w-full max-w-md glass-surface rounded-3xl p-6 border border-white/60 dark:border-white/10 shadow-glass-xl space-y-4">
             <div className="flex items-center justify-between border-b border-surface-200/50 dark:border-surface-800/50 pb-3">
-              <h3 className="font-bold text-surface-900">Log Operational Incident</h3>
+              <h3 id="log-issue-modal-title" className="font-bold text-surface-900">Log Operational Incident</h3>
               <button
                 type="button"
                 onClick={() => setIsAddIssueOpen(false)}
-                className="p-1 rounded-md text-surface-400 hover:text-surface-700"
+                aria-label="Close dialog"
+                className="p-1 rounded-md text-surface-400 hover:text-surface-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
-                <X className="h-4 w-4" />
+                <X className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
 

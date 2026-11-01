@@ -406,9 +406,10 @@ function VenueLayoutContent() {
                 <button
                   type="button"
                   onClick={handleDeleteSelected}
-                  className="p-1 text-surface-400 hover:text-rose-500 rounded"
+                  aria-label={`Delete selected element: ${selectedElement.label}`}
+                  className="p-1 text-surface-400 hover:text-rose-500 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
               </div>
 

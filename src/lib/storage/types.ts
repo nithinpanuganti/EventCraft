@@ -542,3 +542,59 @@ export interface VendorWithQuotes {
     createdAt: Date | string;
   }[];
 }
+
+/* ==========================================================================
+   Runtime Type Guards
+   ========================================================================== */
+
+export function isUserRole(value: unknown): value is UserRole {
+  return typeof value === "string" && ["ORGANIZER", "COORDINATOR", "VENDOR", "GUEST"].includes(value);
+}
+
+export function isGuestCategory(value: unknown): value is GuestCategory {
+  return typeof value === "string" && ["VIP", "FAMILY", "FRIENDS", "COLLEAGUES", "OTHER"].includes(value);
+}
+
+export function isRsvpStatus(value: unknown): value is RsvpStatus {
+  return typeof value === "string" && ["PENDING", "CONFIRMED", "DECLINED"].includes(value);
+}
+
+export function isTableShape(value: unknown): value is TableShape {
+  return typeof value === "string" && ["ROUND", "RECTANGULAR", "CUSTOM"].includes(value);
+}
+
+export function isRiskCategory(value: unknown): value is RiskCategory {
+  return typeof value === "string" && [
+    "WEATHER",
+    "VENDOR",
+    "EQUIPMENT",
+    "SCHEDULE",
+    "BUDGET",
+    "HEALTH_SAFETY",
+    "LOGISTICS",
+    "OTHER",
+  ].includes(value);
+}
+
+export function isDocumentCategory(value: unknown): value is DocumentCategory {
+  return typeof value === "string" && [
+    "CONTRACT",
+    "INVOICE",
+    "RECEIPT",
+    "PERMIT",
+    "FLOOR_PLAN",
+    "RUNSHEET",
+    "OTHER",
+  ].includes(value);
+}
+
+export function isEmergencyContactCategory(value: unknown): value is EmergencyContactCategory {
+  return typeof value === "string" && [
+    "SECURITY",
+    "MEDICAL",
+    "VENUE",
+    "POLICE",
+    "FIRE",
+    "KEY_ORGANIZER",
+  ].includes(value);
+}

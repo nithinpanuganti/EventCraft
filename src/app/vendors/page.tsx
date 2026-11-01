@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Input } from "@/components/ui/Input";
 import dynamic from "next/dynamic";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Tabs } from "@/components/ui/Tabs";
@@ -21,7 +22,16 @@ const QuoteModal = dynamic(
 );
 import { QuoteComparisonTable } from "@/components/vendors/QuoteComparisonTable";
 import { formatMoney } from "@/lib/budget/financial-engine";
-import { type VendorWithQuotes, VendorStatus } from "@/lib/storage/types";
+import {
+  type VendorWithQuotes,
+  VendorStatus,
+  LocalVendorContract,
+  LocalVendorPayment,
+  ContractStatus,
+  VendorPaymentType,
+  VendorPaymentMethod,
+  PaymentStatus,
+} from "@/lib/storage/types";
 import {
   getLocalEvents,
   getLocalVendorsAndCategories,
@@ -30,20 +40,28 @@ import {
   deleteLocalVendor,
   addLocalVendorQuote,
   selectLocalVendorQuote,
+  getLocalVendorContracts,
+  createLocalVendorContract,
+  deleteLocalVendorContract,
+  getLocalVendorPayments,
+  createLocalVendorPayment,
+  deleteLocalVendorPayment,
 } from "@/lib/storage/local-repository";
 import { useAuth } from "@/components/layout/AuthContext";
 import {
   Building2,
   Calendar,
   PlusCircle,
-  FileText,
   Mail,
   Phone,
-  Globe,
   Edit2,
   Trash2,
   CheckCircle2,
   ShieldAlert,
+  DollarSign,
+  Plus,
+  FileCheck,
+  X,
 } from "lucide-react";
 
 interface EventItem {
@@ -53,9 +71,32 @@ interface EventItem {
   currency: string;
 }
 
+const CONTRACT_STATUS_BADGES: Record<
+  ContractStatus,
+  { label: string; variant: "success" | "warning" | "danger" | "primary" }
+> = {
+  DRAFT: { label: "Draft", variant: "warning" },
+  PENDING_SIGNATURE: { label: "Pending Signature", variant: "warning" },
+  SIGNED: { label: "Signed & Active", variant: "primary" },
+  COMPLETED: { label: "Completed", variant: "success" },
+  TERMINATED: { label: "Terminated", variant: "danger" },
+};
+
+const PAYMENT_STATUS_BADGES: Record<
+  PaymentStatus,
+  { label: string; variant: "success" | "warning" | "danger" | "primary" | "secondary" }
+> = {
+  PAID: { label: "Paid & Cleared", variant: "success" },
+  PENDING: { label: "Pending", variant: "warning" },
+  SCHEDULED: { label: "Scheduled", variant: "primary" },
+  OVERDUE: { label: "Overdue", variant: "danger" },
+  CANCELLED: { label: "Cancelled", variant: "secondary" },
+};
+
 function VendorsContent() {
   const searchParams = useSearchParams();
   const urlEventId = searchParams.get("eventId");
+  const initialTab = searchParams.get("tab") || "directory";
   const { user, activeEvent } = useAuth();
 
   const [events, setEvents] = useState<EventItem[]>([]);
@@ -68,8 +109,12 @@ function VendorsContent() {
   const [loadingVendors, setLoadingVendors] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Contracts & Payments state
+  const [contracts, setContracts] = useState<LocalVendorContract[]>([]);
+  const [payments, setPayments] = useState<LocalVendorPayment[]>([]);
+
   // Tab & Filter states
-  const [activeTab, setActiveTab] = useState<string>("directory");
+  const [activeTab, setActiveTab] = useState<string>(initialTab);
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
@@ -80,9 +125,37 @@ function VendorsContent() {
   const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
   const [targetVendorForQuote, setTargetVendorForQuote] = useState<{ id: string; name: string } | null>(null);
 
+  // Contract Modal
+  const [isContractModalOpen, setIsContractModalOpen] = useState(false);
+  const [contractForm, setContractForm] = useState({
+    vendorId: "",
+    contractNumber: "",
+    title: "",
+    totalAmount: 0,
+    advancePayment: 0,
+    status: "SIGNED" as ContractStatus,
+    deliverables: "",
+    terms: "",
+  });
+
+  // Payment Modal
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [paymentForm, setPaymentForm] = useState({
+    vendorId: "",
+    contractId: "",
+    amount: 0,
+    paymentType: "ADVANCE" as VendorPaymentType,
+    paymentMethod: "BANK_TRANSFER" as VendorPaymentMethod,
+    dueDate: new Date().toISOString().slice(0, 10),
+    paidDate: new Date().toISOString().slice(0, 10),
+    receiptNumber: "",
+    notes: "",
+    status: "PAID" as PaymentStatus,
+  });
+
   const [, startTransition] = useTransition();
 
-  // Load events from local IndexedDB
+  // Load events
   const loadEvents = useCallback(async () => {
     try {
       setLoadingEvents(true);
@@ -91,7 +164,11 @@ function VendorsContent() {
       setEvents(evList);
 
       if (evList.length > 0) {
-        setSelectedEventId((prev) => (prev && evList.some((e: EventItem) => e.id === prev) ? prev : (activeEvent?.id || evList[0].id)));
+        setSelectedEventId((prev) =>
+          prev && evList.some((e: EventItem) => e.id === prev)
+            ? prev
+            : activeEvent?.id || evList[0].id
+        );
       }
     } catch (err: unknown) {
       console.error(err);
@@ -106,19 +183,27 @@ function VendorsContent() {
     loadEvents();
   }, [loadEvents]);
 
-  // Load vendors and distinct categories for selected event
-  const loadVendors = useCallback(async (evId: string) => {
+  // Load vendors, contracts, and payments
+  const loadVendorData = useCallback(async (evId: string) => {
     try {
       setLoadingVendors(true);
       setError(null);
-      const result = await getLocalVendorsAndCategories(evId);
-      setVendors(result.vendors);
-      setCategories(result.categories);
+      const [vendorRes, contractsRes, paymentsRes] = await Promise.all([
+        getLocalVendorsAndCategories(evId),
+        getLocalVendorContracts(evId),
+        getLocalVendorPayments(evId),
+      ]);
+      setVendors(vendorRes.vendors);
+      setCategories(vendorRes.categories);
+      setContracts(contractsRes);
+      setPayments(paymentsRes);
     } catch (err: unknown) {
       console.error(err);
-      setError("Failed to load vendor directory.");
+      setError("Failed to load vendor directory & contracts.");
       setVendors([]);
       setCategories([]);
+      setContracts([]);
+      setPayments([]);
     } finally {
       setLoadingVendors(false);
     }
@@ -126,14 +211,16 @@ function VendorsContent() {
 
   useEffect(() => {
     if (selectedEventId) {
-      loadVendors(selectedEventId);
+      loadVendorData(selectedEventId);
     } else {
       setVendors([]);
       setCategories([]);
+      setContracts([]);
+      setPayments([]);
     }
-  }, [selectedEventId, loadVendors]);
+  }, [selectedEventId, loadVendorData]);
 
-  // Create or update vendor
+  // Vendor actions
   const handleSaveVendor = async (data: {
     categoryName: string;
     companyName: string;
@@ -155,80 +242,135 @@ function VendorsContent() {
       });
     }
 
-    await loadVendors(selectedEventId);
+    await loadVendorData(selectedEventId);
     setEditingVendor(null);
   };
 
-  // Delete vendor
-  const handleDeleteVendor = async (vendorId: string, companyName: string) => {
+  const handleDeleteVendor = async (vendorId: string) => {
+    if (!confirm("Are you sure you want to remove this vendor and its quotes?")) return;
     if (!selectedEventId) return;
-    if (!confirm(`Are you sure you want to delete vendor "${companyName}"? All associated quotations will also be deleted.`)) {
-      return;
-    }
 
-    try {
-      await deleteLocalVendor(vendorId);
-      await loadVendors(selectedEventId);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to delete vendor.";
-      alert(msg);
-    }
+    await deleteLocalVendor(vendorId);
+    await loadVendorData(selectedEventId);
   };
 
-  // Save quote
   const handleSaveQuote = async (data: {
-    vendorId: string;
-    description: string;
     quotedAmount: number;
-    currency: string;
+    description?: string | null;
+    currency?: string;
     validUntil?: string | null;
-    isSelected: boolean;
     quoteDocumentUrl?: string | null;
   }) => {
-    if (!selectedEventId) return;
+    if (!selectedEventId || !targetVendorForQuote) return;
 
     await addLocalVendorQuote({
-      vendorId: data.vendorId,
       eventId: selectedEventId,
-      description: data.description,
+      vendorId: targetVendorForQuote.id,
+      description: data.description || "Quoted Service Package",
       quotedAmount: data.quotedAmount,
       currency: data.currency,
       validUntil: data.validUntil,
-      isSelected: data.isSelected,
       quoteDocumentUrl: data.quoteDocumentUrl,
     });
 
-    await loadVendors(selectedEventId);
+    await loadVendorData(selectedEventId);
     setTargetVendorForQuote(null);
   };
 
-  // Select quote
   const handleSelectQuote = async (quoteId: string) => {
     if (!selectedEventId) return;
-
-    try {
-      await selectLocalVendorQuote(selectedEventId, quoteId);
-      await loadVendors(selectedEventId);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to select quote.";
-      alert(msg);
-    }
+    await selectLocalVendorQuote(selectedEventId, quoteId);
+    await loadVendorData(selectedEventId);
   };
 
-  if (loadingEvents) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary-600 border-t-transparent" />
-      </div>
-    );
-  }
+  // Contract actions
+  const handleCreateContract = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedEventId || !contractForm.title.trim()) return;
 
-  if (!user) {
+    await createLocalVendorContract({
+      eventId: selectedEventId,
+      vendorId: contractForm.vendorId || (vendors[0]?.id || "v-1"),
+      contractNumber: contractForm.contractNumber || `CON-${Date.now().toString().slice(-4)}`,
+      title: contractForm.title.trim(),
+      totalAmount: contractForm.totalAmount,
+      advanceAmount: contractForm.advancePayment,
+      status: contractForm.status,
+      signedDate: new Date().toISOString(),
+      effectiveDate: new Date().toISOString(),
+      completionDate: new Date().toISOString(),
+      termsAndConditions: contractForm.terms || undefined,
+    });
+
+    setIsContractModalOpen(false);
+    setContractForm({
+      vendorId: "",
+      contractNumber: "",
+      title: "",
+      totalAmount: 0,
+      advancePayment: 0,
+      status: "SIGNED",
+      deliverables: "",
+      terms: "",
+    });
+    await loadVendorData(selectedEventId);
+  };
+
+  const handleDeleteContract = async (contractId: string) => {
+    if (!confirm("Are you sure you want to delete this contract?")) return;
+    await deleteLocalVendorContract(contractId);
+    if (selectedEventId) await loadVendorData(selectedEventId);
+  };
+
+  // Payment actions
+  const handleCreatePayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedEventId || paymentForm.amount <= 0) return;
+
+    await createLocalVendorPayment({
+      eventId: selectedEventId,
+      vendorId: paymentForm.vendorId || (vendors[0]?.id || "v-1"),
+      contractId: paymentForm.contractId || undefined,
+      title: `${paymentForm.paymentType} Payment`,
+      amount: paymentForm.amount,
+      amountCents: Math.round(paymentForm.amount * 100),
+      paymentType: paymentForm.paymentType,
+      paymentMethod: paymentForm.paymentMethod,
+      status: paymentForm.status,
+      dueDate: paymentForm.dueDate,
+      paidDate: paymentForm.status === "PAID" ? paymentForm.paidDate : null,
+      receiptNumber: paymentForm.receiptNumber || `REC-${Date.now().toString().slice(-4)}`,
+      notes: paymentForm.notes || undefined,
+    });
+
+    setIsPaymentModalOpen(false);
+    setPaymentForm({
+      vendorId: "",
+      contractId: "",
+      amount: 0,
+      paymentType: "ADVANCE",
+      paymentMethod: "BANK_TRANSFER",
+      dueDate: new Date().toISOString().slice(0, 10),
+      paidDate: new Date().toISOString().slice(0, 10),
+      receiptNumber: "",
+      notes: "",
+      status: "PAID",
+    });
+    if (selectedEventId) await loadVendorData(selectedEventId);
+  };
+
+  const handleDeletePayment = async (paymentId: string) => {
+    if (!confirm("Delete this payment entry?")) return;
+    await deleteLocalVendorPayment(paymentId);
+    if (selectedEventId) await loadVendorData(selectedEventId);
+  };
+
+  if (!user && !loadingEvents) {
     return (
       <div className="space-y-6">
         <PageHeader
-          title="Vendor Directory & Quotations"
-          description="Track service providers, manage quotes, and compare vendor offers side-by-side."
+          title="Vendor Directory & Contracts"
+          description="Track service providers, manage quotes, contracts, and payments."
         />
         <EmptyState
           icon={Building2}
@@ -245,13 +387,13 @@ function VendorsContent() {
     return (
       <div className="space-y-6">
         <PageHeader
-          title="Vendor Directory & Quotations"
-          description="Track service providers, manage quotes, and compare vendor offers side-by-side."
+          title="Vendor Directory & Contracts"
+          description="Track service providers, manage quotes, contracts, and payments."
         />
         <EmptyState
           icon={Building2}
           title="No events found"
-          description="Create your first event draft to unlock vendor directory management and quote comparisons."
+          description="Create your first event draft to unlock vendor directory management and contracts."
           actionLabel="Create Event"
           actionHref="/events/new"
         />
@@ -261,6 +403,13 @@ function VendorsContent() {
 
   const selectedEvent = events.find((e) => e.id === selectedEventId);
   const totalQuotesCount = vendors.reduce((sum, v) => sum + v.quotes.length, 0);
+
+  // Financial sums for payments
+  const totalContracted = contracts.reduce((acc, c) => acc + c.totalAmount, 0);
+  const totalDisbursed = payments
+    .filter((p) => p.status === "PAID")
+    .reduce((acc, p) => acc + p.amount, 0);
+  const outstandingBalance = Math.max(0, totalContracted - totalDisbursed);
 
   // Filter vendors
   const filteredVendors = vendors.filter((v) => {
@@ -285,17 +434,18 @@ function VendorsContent() {
   };
 
   return (
-    <div className="space-y-6 pb-12 animate-page-enter">
+    <div className="space-y-6 pb-12 animate-page-enter max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
       {/* Top Header & Event Selector */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <PageHeader
-          title="Vendor Directory & Quotations"
-          description="Organize candidate providers, log official quotes, and compare side-by-side pricing."
+          title="Vendor Management & Contracts"
+          description="Organize candidate providers, compare side-by-side quotes, track contracts, and manage payments."
         />
 
         <div className="flex items-center gap-2 self-start md:self-auto rounded-2xl glass-card px-3.5 py-2 shadow-glass-subtle">
           <Calendar className="h-4 w-4 text-primary-600" />
           <select
+            aria-label="Select Event"
             value={selectedEventId || ""}
             onChange={(e) => {
               const id = e.target.value;
@@ -314,13 +464,11 @@ function VendorsContent() {
         </div>
       </div>
 
-      {/* Safety Directive Banner in Luminous Glass */}
-      <div className="flex items-start gap-3 rounded-2xl border border-warning-500/25 bg-warning-50/80 backdrop-blur-md p-4 text-xs text-warning-950 shadow-glass-subtle">
+      {/* Safety Directive Banner */}
+      <div className="flex items-start gap-3 rounded-2xl border border-warning-500/25 bg-warning-50/80 dark:bg-warning-950/20 backdrop-blur-md p-4 text-xs text-warning-950 dark:text-warning-200 shadow-glass-subtle">
         <ShieldAlert className="h-5 w-5 shrink-0 text-warning-600 mt-0.5" />
         <div className="leading-relaxed">
-          <span className="font-bold text-warning-950">Deterministic Vendor Integrity:</span> All
-          records below represent verified user-logged vendor communications and quotations.
-          EventCraft AI never fabricates vendor identities, phone numbers, or unverified quotes.
+          <span className="font-bold">Contractual Safeguard:</span> All vendor contracts, advance disbursement receipts, and financial terms remain saved exclusively on your local device.
         </div>
       </div>
 
@@ -339,48 +487,80 @@ function VendorsContent() {
       {!loadingVendors && selectedEvent && (
         <>
           {/* Main Workspace Tabs Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-surface-200/60">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-surface-200/60 dark:border-surface-800/60">
             <Tabs
               activeTab={activeTab}
               onChange={setActiveTab}
               tabs={[
                 { id: "directory", label: "Vendor Directory", count: vendors.length },
                 { id: "quotes", label: "Quotation Comparison", count: totalQuotesCount },
+                { id: "contracts", label: "Contracts & Terms", count: contracts.length },
+                { id: "payments", label: "Payment Ledger", count: payments.length },
               ]}
             />
 
-            <Button
-              size="sm"
-              onClick={() => {
-                setEditingVendor(null);
-                setIsVendorModalOpen(true);
-              }}
-              className="gap-1.5 text-xs self-start sm:self-auto shadow-glass font-medium"
-            >
-              <PlusCircle className="h-3.5 w-3.5" />
-              <span>Add Vendor</span>
-            </Button>
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              {activeTab === "contracts" && (
+                <Button
+                  size="sm"
+                  onClick={() => setIsContractModalOpen(true)}
+                  className="gap-1.5 text-xs shadow-glass font-medium"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>New Contract</span>
+                </Button>
+              )}
+
+              {activeTab === "payments" && (
+                <Button
+                  size="sm"
+                  onClick={() => setIsPaymentModalOpen(true)}
+                  className="gap-1.5 text-xs shadow-glass font-medium"
+                >
+                  <DollarSign className="h-3.5 w-3.5" />
+                  <span>Record Payment</span>
+                </Button>
+              )}
+
+              {activeTab === "directory" && (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setEditingVendor(null);
+                    setIsVendorModalOpen(true);
+                  }}
+                  className="gap-1.5 text-xs shadow-glass font-medium"
+                >
+                  <PlusCircle className="h-3.5 w-3.5" />
+                  <span>Add Vendor</span>
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* TAB 1: VENDOR DIRECTORY */}
           {activeTab === "directory" && (
             <div className="space-y-4 pt-2 animate-page-enter">
               {/* Category & Status Filters in Glass Surface */}
-              <div className="flex flex-wrap items-center gap-3 p-3.5 glass-surface-subtle border border-surface-200/80 rounded-2xl text-xs shadow-glass-subtle">
+              <div className="flex flex-wrap items-center gap-3 p-3.5 glass-surface-subtle border border-surface-200/80 dark:border-surface-800/80 rounded-2xl text-xs shadow-glass-subtle">
                 <span className="font-bold text-surface-700">Filter by:</span>
 
                 <select
+                  aria-label="Filter by Category"
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
                   className="glass-input rounded-xl px-3 py-1.5 text-xs text-surface-800 font-medium cursor-pointer"
                 >
                   <option value="ALL">All Categories</option>
                   {categories.map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
                   ))}
                 </select>
 
                 <select
+                  aria-label="Filter by Status"
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                   className="glass-input rounded-xl px-3 py-1.5 text-xs text-surface-800 font-medium cursor-pointer"
@@ -392,39 +572,59 @@ function VendorsContent() {
                   <option value="BOOKED">Booked</option>
                   <option value="DECLINED">Declined</option>
                 </select>
-
-                <span className="ml-auto text-surface-500 text-[11px] font-medium">
-                  Showing {filteredVendors.length} of {vendors.length} vendors
-                </span>
               </div>
 
               {filteredVendors.length === 0 ? (
-                <EmptyState
-                  icon={Building2}
-                  title="No vendors found"
-                  description="Add vendor candidates for catering, photography, venues, or decor to begin organizing your event services."
-                  actionLabel="Add First Vendor"
-                  onAction={() => {
-                    setEditingVendor(null);
-                    setIsVendorModalOpen(true);
-                  }}
-                />
+                <div className="py-12 text-center text-xs text-surface-400">
+                  <Building2 className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                  No vendors found matching your filter criteria.
+                </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredVendors.map((vendor) => {
                     const selectedQuote = vendor.quotes.find((q) => q.isSelected);
-
                     return (
-                      <Card key={vendor.id} hoverable className="p-5 space-y-3.5 text-xs">
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h4 className="font-bold text-sm sm:text-base text-surface-900">{vendor.companyName}</h4>
-                              {getStatusBadge(vendor.status)}
+                      <Card key={vendor.id} variant="elevated" className="p-5 specular-top flex flex-col justify-between space-y-4">
+                        <div className="space-y-2.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-primary-600 dark:text-primary-400">
+                                {vendor.categoryName}
+                              </span>
+                              <h3 className="font-bold text-sm text-surface-900">{vendor.companyName}</h3>
                             </div>
-                            <span className="text-[11px] text-surface-500 font-semibold mt-0.5 block">
-                              {vendor.categoryName}
-                            </span>
+                            {getStatusBadge(vendor.status)}
+                          </div>
+
+                          <div className="space-y-1 text-xs text-surface-600">
+                            {vendor.contactPerson && (
+                              <div className="truncate">Contact: {vendor.contactPerson}</div>
+                            )}
+                            {vendor.email && (
+                              <div className="flex items-center gap-1.5 truncate">
+                                <Mail className="h-3 w-3 text-surface-400 shrink-0" />
+                                <span className="truncate">{vendor.email}</span>
+                              </div>
+                            )}
+                            {vendor.phone && (
+                              <div className="flex items-center gap-1.5">
+                                <Phone className="h-3 w-3 text-surface-400 shrink-0" />
+                                <span>{vendor.phone}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="pt-3 border-t border-surface-200/50 dark:border-surface-800/50 flex items-center justify-between text-xs">
+                          <div>
+                            {selectedQuote ? (
+                              <span className="font-bold text-emerald-600 flex items-center gap-1">
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                                <span>{formatMoney(selectedQuote.quotedAmount, selectedQuote.currency)}</span>
+                              </span>
+                            ) : (
+                              <span className="text-surface-400">{vendor.quotes.length} quotes logged</span>
+                            )}
                           </div>
 
                           <div className="flex items-center gap-1">
@@ -432,96 +632,31 @@ function VendorsContent() {
                               variant="ghost"
                               size="sm"
                               onClick={() => {
+                                setTargetVendorForQuote({ id: vendor.id, name: vendor.companyName });
+                                setIsQuoteModalOpen(true);
+                              }}
+                              className="text-[11px] px-2 py-1"
+                            >
+                              Log Quote
+                            </Button>
+                            <button
+                              type="button"
+                              onClick={() => {
                                 setEditingVendor(vendor);
                                 setIsVendorModalOpen(true);
                               }}
-                              className="h-7 w-7 p-0 text-surface-400 hover:text-surface-900 rounded-lg"
-                              title="Edit vendor"
+                              className="p-1.5 text-surface-400 hover:text-surface-700 rounded-lg"
                             >
                               <Edit2 className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteVendor(vendor.id, vendor.companyName)}
-                              className="h-7 w-7 p-0 text-danger-500 hover:text-danger-700 hover:bg-danger-50/80 rounded-lg"
-                              title="Delete vendor"
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteVendor(vendor.id)}
+                              className="p-1.5 text-surface-400 hover:text-rose-500 rounded-lg"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
+                            </button>
                           </div>
-                        </div>
-
-                        {/* Contact details in Frosted Glass Box */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-surface-600 glass-surface-subtle p-3 rounded-xl border border-surface-200/70 shadow-glass-subtle">
-                          {vendor.contactPerson && (
-                            <div>
-                              <span className="text-surface-400 block text-[10px] uppercase font-bold tracking-wide">Contact</span>
-                              <span className="font-semibold text-surface-800">{vendor.contactPerson}</span>
-                            </div>
-                          )}
-                          {vendor.phone && (
-                            <div className="flex items-center gap-1.5">
-                              <Phone className="h-3.5 w-3.5 text-surface-400" />
-                              <span className="font-mono">{vendor.phone}</span>
-                            </div>
-                          )}
-                          {vendor.email && (
-                            <div className="flex items-center gap-1.5 truncate col-span-1 sm:col-span-2">
-                              <Mail className="h-3.5 w-3.5 text-surface-400 shrink-0" />
-                              <a href={`mailto:${vendor.email}`} className="text-primary-600 hover:underline truncate font-medium">
-                                {vendor.email}
-                              </a>
-                            </div>
-                          )}
-                          {vendor.websiteUrl && (
-                            <div className="flex items-center gap-1.5 truncate col-span-1 sm:col-span-2">
-                              <Globe className="h-3.5 w-3.5 text-surface-400 shrink-0" />
-                              <a
-                                href={vendor.websiteUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-primary-600 hover:underline truncate font-medium"
-                              >
-                                {vendor.websiteUrl.replace(/^https?:\/\//, "")}
-                              </a>
-                            </div>
-                          )}
-                        </div>
-
-                        {vendor.notes && (
-                          <p className="text-[11px] text-surface-500 italic leading-relaxed">
-                            &ldquo;{vendor.notes}&rdquo;
-                          </p>
-                        )}
-
-                        {/* Quotations summary footer */}
-                        <div className="flex items-center justify-between pt-2.5 border-t border-surface-200/50 text-[11px]">
-                          <div>
-                            {selectedQuote ? (
-                              <span className="font-bold text-emerald-700 flex items-center gap-1.5">
-                                <CheckCircle2 className="h-3.5 w-3.5" />
-                                <span>Selected: {formatMoney(selectedQuote.quotedAmount, selectedQuote.currency)}</span>
-                              </span>
-                            ) : (
-                              <span className="text-surface-400 font-medium">
-                                {vendor.quotes.length} quote{vendor.quotes.length !== 1 ? "s" : ""} logged
-                              </span>
-                            )}
-                          </div>
-
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setTargetVendorForQuote({ id: vendor.id, name: vendor.companyName });
-                              setIsQuoteModalOpen(true);
-                            }}
-                            className="h-7 text-[11px] px-2.5 gap-1.5 text-primary-700 border-primary-200/80 bg-primary-50/80 hover:bg-primary-100 shadow-glass-subtle font-semibold"
-                          >
-                            <FileText className="h-3.5 w-3.5" />
-                            <span>Log Quote</span>
-                          </Button>
                         </div>
                       </Card>
                     );
@@ -534,7 +669,7 @@ function VendorsContent() {
           {/* TAB 2: QUOTE COMPARISON TABLE */}
           {activeTab === "quotes" && (
             <div className="pt-2 animate-page-enter">
-              <Card className="p-5 sm:p-6">
+              <Card className="p-5 sm:p-6 specular-top">
                 <QuoteComparisonTable
                   vendors={vendors}
                   onSelectQuote={handleSelectQuote}
@@ -542,7 +677,395 @@ function VendorsContent() {
               </Card>
             </div>
           )}
+
+          {/* TAB 3: CONTRACTS & TERMS */}
+          {activeTab === "contracts" && (
+            <div className="space-y-4 pt-2 animate-page-enter">
+              {contracts.length === 0 ? (
+                <Card variant="subtle" className="p-10 text-center space-y-3">
+                  <FileCheck className="h-10 w-10 text-surface-400 mx-auto" />
+                  <h3 className="text-sm font-bold text-surface-900">No Contracts Established</h3>
+                  <p className="text-xs text-surface-500 max-w-sm mx-auto">
+                    Create formal vendor contracts with deliverables, advance schedules, and fulfillment terms.
+                  </p>
+                  <Button
+                    size="sm"
+                    onClick={() => setIsContractModalOpen(true)}
+                    className="gap-1.5 text-xs shadow-glass"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>Create First Contract</span>
+                  </Button>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {contracts.map((contract) => {
+                    const cBadge = CONTRACT_STATUS_BADGES[contract.status];
+                    const vendorMatch = vendors.find((v) => v.id === contract.vendorId);
+
+                    return (
+                      <Card key={contract.id} variant="elevated" className="p-5 specular-top flex flex-col justify-between space-y-4">
+                        <div className="space-y-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-surface-500">
+                                #{contract.contractNumber}
+                              </span>
+                              <h3 className="font-bold text-sm text-surface-900">{contract.title}</h3>
+                              <div className="text-xs text-primary-600 dark:text-primary-400 font-semibold">
+                                {vendorMatch ? vendorMatch.companyName : "Vendor"}
+                              </div>
+                            </div>
+                            <Badge variant={cBadge.variant} size="sm">
+                              {cBadge.label}
+                            </Badge>
+                          </div>
+
+                          <div className="p-3 rounded-xl bg-surface-500/5 border border-white/10 space-y-1 text-xs">
+                            <div className="flex justify-between">
+                              <span className="text-surface-500">Total Contract:</span>
+                              <span className="font-bold text-surface-900">
+                                {formatMoney(contract.totalAmount, selectedEvent?.currency || "USD")}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-surface-500">Advance Paid:</span>
+                              <span className="text-emerald-600 font-semibold">
+                                {formatMoney(contract.advanceAmount, selectedEvent?.currency || "USD")}
+                              </span>
+                            </div>
+                            <div className="flex justify-between border-t border-surface-200/50 dark:border-surface-800/50 pt-1">
+                              <span className="text-surface-500 font-medium">Balance Due:</span>
+                              <span className="text-surface-900 font-bold">
+                                {formatMoney(Math.max(0, contract.totalAmount - contract.advanceAmount), selectedEvent?.currency || "USD")}
+                              </span>
+                            </div>
+                          </div>
+
+                          {contract.termsAndConditions && (
+                            <div className="space-y-1">
+                              <span className="text-[10px] font-bold uppercase text-surface-500">
+                                Terms & Conditions
+                              </span>
+                              <p className="text-xs text-surface-600 line-clamp-2">
+                                {contract.termsAndConditions}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="pt-3 border-t border-surface-200/50 dark:border-surface-800/50 flex items-center justify-between text-xs">
+                          <span className="text-surface-400 text-[11px]">
+                            Signed: {contract.signedDate ? new Date(contract.signedDate).toLocaleDateString() : "Pending"}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteContract(contract.id)}
+                            className="p-1.5 text-surface-400 hover:text-rose-500 rounded-lg"
+                            title="Delete Contract"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 4: PAYMENT LEDGER */}
+          {activeTab === "payments" && (
+            <div className="space-y-5 pt-2 animate-page-enter">
+              {/* Financial Summary */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <Card variant="subtle" className="p-4">
+                  <div className="text-xs text-surface-500 font-medium">Total Contracted</div>
+                  <div className="text-2xl font-black text-surface-900 mt-1">
+                    {formatMoney(totalContracted, selectedEvent?.currency || "USD")}
+                  </div>
+                </Card>
+                <Card variant="subtle" className="p-4">
+                  <div className="text-xs text-emerald-600 font-medium">Total Disbursed</div>
+                  <div className="text-2xl font-black text-emerald-600 mt-1">
+                    {formatMoney(totalDisbursed, selectedEvent?.currency || "USD")}
+                  </div>
+                </Card>
+                <Card variant="subtle" className="p-4">
+                  <div className="text-xs text-amber-500 font-medium">Outstanding Balance</div>
+                  <div className="text-2xl font-black text-surface-900 mt-1">
+                    {formatMoney(outstandingBalance, selectedEvent?.currency || "USD")}
+                  </div>
+                </Card>
+              </div>
+
+              {/* Payments Table */}
+              <Card variant="elevated" className="overflow-hidden specular-top">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-surface-500/5 border-b border-surface-200/50 dark:border-surface-800/50 uppercase tracking-wider text-[11px] text-surface-500 font-semibold">
+                      <tr>
+                        <th className="py-3 px-4">Receipt #</th>
+                        <th className="py-3 px-4">Vendor</th>
+                        <th className="py-3 px-4">Type</th>
+                        <th className="py-3 px-4">Amount</th>
+                        <th className="py-3 px-4">Method</th>
+                        <th className="py-3 px-4">Status</th>
+                        <th className="py-3 px-4">Date</th>
+                        <th className="py-3 px-4 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-surface-200/40 dark:divide-surface-800/40">
+                      {payments.length > 0 ? (
+                        payments.map((p) => {
+                          const vendorMatch = vendors.find((v) => v.id === p.vendorId);
+                          const pBadge = PAYMENT_STATUS_BADGES[p.status];
+                          return (
+                            <tr key={p.id} className="hover:bg-primary-500/5 transition-colors">
+                              <td className="py-3.5 px-4 font-bold text-surface-900">
+                                {p.receiptNumber || "N/A"}
+                              </td>
+                              <td className="py-3.5 px-4 font-semibold text-surface-800">
+                                {vendorMatch ? vendorMatch.companyName : "Vendor"}
+                              </td>
+                              <td className="py-3.5 px-4 text-surface-600">{p.paymentType}</td>
+                              <td className="py-3.5 px-4 font-extrabold text-surface-900">
+                                {formatMoney(p.amount, selectedEvent?.currency || "USD")}
+                              </td>
+                              <td className="py-3.5 px-4 text-surface-600">{p.paymentMethod}</td>
+                              <td className="py-3.5 px-4">
+                                <Badge variant={pBadge.variant} size="sm">
+                                  {pBadge.label}
+                                </Badge>
+                              </td>
+                              <td className="py-3.5 px-4 text-surface-500">
+                                {p.paidDate ? new Date(p.paidDate).toLocaleDateString() : p.dueDate}
+                              </td>
+                              <td className="py-3.5 px-4 text-right">
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeletePayment(p.id)}
+                                  className="p-1 rounded text-surface-400 hover:text-rose-500"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan={8} className="py-8 text-center text-surface-400">
+                            No payment disbursements recorded yet.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </div>
+          )}
         </>
+      )}
+
+      {/* New Contract Modal */}
+      {isContractModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-lg glass-surface rounded-3xl p-6 border border-white/60 dark:border-white/10 shadow-glass-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-surface-200/50 dark:border-surface-800/50 pb-3">
+              <h3 className="font-bold text-surface-900">Create Vendor Contract</h3>
+              <button
+                type="button"
+                onClick={() => setIsContractModalOpen(false)}
+                className="p-1 rounded-md text-surface-400 hover:text-surface-700"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateContract} className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-surface-700 block mb-1">
+                  Select Vendor
+                </label>
+                <select
+                  value={contractForm.vendorId}
+                  onChange={(e) => setContractForm({ ...contractForm, vendorId: e.target.value })}
+                  className="w-full text-xs px-3 py-2.5 rounded-xl bg-white/70 dark:bg-surface-900/70 border border-surface-200 dark:border-surface-800 focus:outline-none"
+                >
+                  <option value="">Select a vendor...</option>
+                  {vendors.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.companyName} ({v.categoryName})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="Contract Title"
+                  required
+                  placeholder="e.g. Master Catering Agreement"
+                  value={contractForm.title}
+                  onChange={(e) => setContractForm({ ...contractForm, title: e.target.value })}
+                />
+                <Input
+                  label="Contract #"
+                  placeholder="e.g. CON-2026-01"
+                  value={contractForm.contractNumber}
+                  onChange={(e) => setContractForm({ ...contractForm, contractNumber: e.target.value })}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="Total Amount ($)"
+                  type="number"
+                  step="0.01"
+                  required
+                  value={contractForm.totalAmount}
+                  onChange={(e) =>
+                    setContractForm({ ...contractForm, totalAmount: parseFloat(e.target.value) || 0 })
+                  }
+                />
+                <Input
+                  label="Advance Payment ($)"
+                  type="number"
+                  step="0.01"
+                  value={contractForm.advancePayment}
+                  onChange={(e) =>
+                    setContractForm({ ...contractForm, advancePayment: parseFloat(e.target.value) || 0 })
+                  }
+                />
+              </div>
+
+              <Input
+                label="Deliverables (Comma-separated)"
+                placeholder="e.g. 3-Course Dinner, Cocktail Bar, Service Staff"
+                value={contractForm.deliverables}
+                onChange={(e) => setContractForm({ ...contractForm, deliverables: e.target.value })}
+              />
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-surface-200/50 dark:border-surface-800/50">
+                <Button type="button" variant="ghost" size="sm" onClick={() => setIsContractModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" variant="primary" size="sm" className="shadow-glass-glow">
+                  Save Contract
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Record Payment Modal */}
+      {isPaymentModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-lg glass-surface rounded-3xl p-6 border border-white/60 dark:border-white/10 shadow-glass-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-surface-200/50 dark:border-surface-800/50 pb-3">
+              <h3 className="font-bold text-surface-900">Record Vendor Payment</h3>
+              <button
+                type="button"
+                onClick={() => setIsPaymentModalOpen(false)}
+                className="p-1 rounded-md text-surface-400 hover:text-surface-700"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreatePayment} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-surface-700 block mb-1">Vendor</label>
+                  <select
+                    value={paymentForm.vendorId}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, vendorId: e.target.value })}
+                    className="w-full text-xs px-3 py-2 rounded-xl bg-white/70 dark:bg-surface-900/70 border border-surface-200 dark:border-surface-800 focus:outline-none"
+                  >
+                    <option value="">Select Vendor...</option>
+                    {vendors.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.companyName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <Input
+                  label="Amount ($)"
+                  type="number"
+                  step="0.01"
+                  required
+                  value={paymentForm.amount}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, amount: parseFloat(e.target.value) || 0 })}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-surface-700 block mb-1">Payment Type</label>
+                  <select
+                    value={paymentForm.paymentType}
+                    onChange={(e) =>
+                      setPaymentForm({ ...paymentForm, paymentType: e.target.value as VendorPaymentType })
+                    }
+                    className="w-full text-xs px-3 py-2 rounded-xl bg-white/70 dark:bg-surface-900/70 border border-surface-200 dark:border-surface-800 focus:outline-none"
+                  >
+                    <option value="ADVANCE">Advance / Deposit</option>
+                    <option value="MILESTONE">Milestone</option>
+                    <option value="FINAL">Final Settlement</option>
+                    <option value="REFUND">Refund</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-surface-700 block mb-1">Method</label>
+                  <select
+                    value={paymentForm.paymentMethod}
+                    onChange={(e) =>
+                      setPaymentForm({ ...paymentForm, paymentMethod: e.target.value as VendorPaymentMethod })
+                    }
+                    className="w-full text-xs px-3 py-2 rounded-xl bg-white/70 dark:bg-surface-900/70 border border-surface-200 dark:border-surface-800 focus:outline-none"
+                  >
+                    <option value="BANK_TRANSFER">Bank Wire</option>
+                    <option value="CREDIT_CARD">Credit Card</option>
+                    <option value="CASH">Cash</option>
+                    <option value="CHECK">Check</option>
+                    <option value="DIGITAL_WALLET">Digital Wallet</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="Receipt / Transaction #"
+                  placeholder="e.g. TX-98412"
+                  value={paymentForm.receiptNumber}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, receiptNumber: e.target.value })}
+                />
+                <Input
+                  label="Payment Date"
+                  type="date"
+                  value={paymentForm.paidDate}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, paidDate: e.target.value })}
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-surface-200/50 dark:border-surface-800/50">
+                <Button type="button" variant="ghost" size="sm" onClick={() => setIsPaymentModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" variant="primary" size="sm" className="shadow-glass-glow">
+                  Record Disbursement
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* Vendor Modal */}

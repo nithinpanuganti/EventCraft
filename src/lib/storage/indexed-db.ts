@@ -9,10 +9,22 @@ import {
   LocalVendorQuote,
   LocalPlanRevision,
   LocalDatabaseBackup,
+  LocalGuest,
+  LocalTable,
+  LocalInvitation,
+  LocalVendorContract,
+  LocalVendorPayment,
+  LocalVenueLayout,
+  LocalRisk,
+  LocalEventIssue,
+  LocalVolunteer,
+  LocalEmergencyContact,
+  LocalDocument,
+  LocalActivityLog,
 } from "./types";
 
 const DB_NAME = "eventcraft_local_db";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 export type StoreName =
   | "profiles"
@@ -23,9 +35,21 @@ export type StoreName =
   | "tasks"
   | "vendors"
   | "vendor_quotes"
-  | "plan_revisions";
+  | "plan_revisions"
+  | "guests"
+  | "tables"
+  | "invitations"
+  | "vendor_contracts"
+  | "vendor_payments"
+  | "venue_layouts"
+  | "risks"
+  | "event_issues"
+  | "volunteers"
+  | "emergency_contacts"
+  | "documents"
+  | "activity_logs";
 
-const STORE_NAMES: StoreName[] = [
+export const STORE_NAMES: StoreName[] = [
   "profiles",
   "events",
   "event_plans",
@@ -35,6 +59,18 @@ const STORE_NAMES: StoreName[] = [
   "vendors",
   "vendor_quotes",
   "plan_revisions",
+  "guests",
+  "tables",
+  "invitations",
+  "vendor_contracts",
+  "vendor_payments",
+  "venue_layouts",
+  "risks",
+  "event_issues",
+  "volunteers",
+  "emergency_contacts",
+  "documents",
+  "activity_logs",
 ];
 
 // In-memory fallback storage for SSR and Node.js testing environments
@@ -288,7 +324,7 @@ export async function dbClear(storeName: StoreName): Promise<boolean> {
 }
 
 /**
- * Exports all local data to a portable, versioned JSON backup object.
+ * Exports all local data across all 21 object stores to a portable JSON backup.
  */
 export async function exportDatabaseBackup(): Promise<LocalDatabaseBackup> {
   const [
@@ -301,6 +337,18 @@ export async function exportDatabaseBackup(): Promise<LocalDatabaseBackup> {
     vendors,
     vendorQuotes,
     planRevisions,
+    guests,
+    tables,
+    invitations,
+    vendorContracts,
+    vendorPayments,
+    venueLayouts,
+    risks,
+    issues,
+    volunteers,
+    emergencyContacts,
+    documents,
+    activityLogs,
   ] = await Promise.all([
     dbGetAll<LocalProfile>("profiles"),
     dbGetAll<LocalEvent>("events"),
@@ -311,13 +359,25 @@ export async function exportDatabaseBackup(): Promise<LocalDatabaseBackup> {
     dbGetAll<LocalVendor>("vendors"),
     dbGetAll<LocalVendorQuote>("vendor_quotes"),
     dbGetAll<LocalPlanRevision>("plan_revisions"),
+    dbGetAll<LocalGuest>("guests"),
+    dbGetAll<LocalTable>("tables"),
+    dbGetAll<LocalInvitation>("invitations"),
+    dbGetAll<LocalVendorContract>("vendor_contracts"),
+    dbGetAll<LocalVendorPayment>("vendor_payments"),
+    dbGetAll<LocalVenueLayout>("venue_layouts"),
+    dbGetAll<LocalRisk>("risks"),
+    dbGetAll<LocalEventIssue>("event_issues"),
+    dbGetAll<LocalVolunteer>("volunteers"),
+    dbGetAll<LocalEmergencyContact>("emergency_contacts"),
+    dbGetAll<LocalDocument>("documents"),
+    dbGetAll<LocalActivityLog>("activity_logs"),
   ]);
 
   return {
     schemaVersion: 1,
     exportedAt: new Date().toISOString(),
     appName: "EventCraft AI",
-    appVersion: "0.2.0-local",
+    appVersion: "0.3.0-local",
     profiles,
     events,
     eventPlans,
@@ -327,11 +387,23 @@ export async function exportDatabaseBackup(): Promise<LocalDatabaseBackup> {
     vendors,
     vendorQuotes,
     planRevisions,
+    guests,
+    tables,
+    invitations,
+    vendorContracts,
+    vendorPayments,
+    venueLayouts,
+    risks,
+    issues,
+    volunteers,
+    emergencyContacts,
+    documents,
+    activityLogs,
   };
 }
 
 /**
- * Validates and imports a JSON backup into IndexedDB.
+ * Validates and imports a JSON backup into IndexedDB across all 21 object stores.
  */
 export async function importDatabaseBackup(
   backup: LocalDatabaseBackup
@@ -340,8 +412,8 @@ export async function importDatabaseBackup(
     throw new Error("Invalid backup format. Missing valid schemaVersion.");
   }
 
-  if (backup.schemaVersion > 1) {
-    throw new Error(`Unsupported schema version ${backup.schemaVersion}. This app supports version 1.`);
+  if (backup.schemaVersion > 2) {
+    throw new Error(`Unsupported schema version ${backup.schemaVersion}. This app supports versions 1 and 2.`);
   }
 
   const counts: Record<string, number> = {
@@ -354,6 +426,18 @@ export async function importDatabaseBackup(
     vendors: 0,
     vendorQuotes: 0,
     planRevisions: 0,
+    guests: 0,
+    tables: 0,
+    invitations: 0,
+    vendorContracts: 0,
+    vendorPayments: 0,
+    venueLayouts: 0,
+    risks: 0,
+    issues: 0,
+    volunteers: 0,
+    emergencyContacts: 0,
+    documents: 0,
+    activityLogs: 0,
   };
 
   // Import each entity via high-performance batch writes
@@ -409,6 +493,78 @@ export async function importDatabaseBackup(
     const valid = backup.planRevisions.filter((rev) => rev.id && rev.eventId);
     await dbPutBatch("plan_revisions", valid);
     counts.planRevisions = valid.length;
+  }
+
+  if (Array.isArray(backup.guests) && backup.guests.length > 0) {
+    const valid = backup.guests.filter((g) => g.id && g.eventId);
+    await dbPutBatch("guests", valid);
+    counts.guests = valid.length;
+  }
+
+  if (Array.isArray(backup.tables) && backup.tables.length > 0) {
+    const valid = backup.tables.filter((tb) => tb.id && tb.eventId);
+    await dbPutBatch("tables", valid);
+    counts.tables = valid.length;
+  }
+
+  if (Array.isArray(backup.invitations) && backup.invitations.length > 0) {
+    const valid = backup.invitations.filter((inv) => inv.id && inv.eventId);
+    await dbPutBatch("invitations", valid);
+    counts.invitations = valid.length;
+  }
+
+  if (Array.isArray(backup.vendorContracts) && backup.vendorContracts.length > 0) {
+    const valid = backup.vendorContracts.filter((c) => c.id && c.eventId);
+    await dbPutBatch("vendor_contracts", valid);
+    counts.vendorContracts = valid.length;
+  }
+
+  if (Array.isArray(backup.vendorPayments) && backup.vendorPayments.length > 0) {
+    const valid = backup.vendorPayments.filter((p) => p.id && p.eventId);
+    await dbPutBatch("vendor_payments", valid);
+    counts.vendorPayments = valid.length;
+  }
+
+  if (Array.isArray(backup.venueLayouts) && backup.venueLayouts.length > 0) {
+    const valid = backup.venueLayouts.filter((l) => l.id && l.eventId);
+    await dbPutBatch("venue_layouts", valid);
+    counts.venueLayouts = valid.length;
+  }
+
+  if (Array.isArray(backup.risks) && backup.risks.length > 0) {
+    const valid = backup.risks.filter((r) => r.id && r.eventId);
+    await dbPutBatch("risks", valid);
+    counts.risks = valid.length;
+  }
+
+  if (Array.isArray(backup.issues) && backup.issues.length > 0) {
+    const valid = backup.issues.filter((iss) => iss.id && iss.eventId);
+    await dbPutBatch("event_issues", valid);
+    counts.issues = valid.length;
+  }
+
+  if (Array.isArray(backup.volunteers) && backup.volunteers.length > 0) {
+    const valid = backup.volunteers.filter((vol) => vol.id && vol.eventId);
+    await dbPutBatch("volunteers", valid);
+    counts.volunteers = valid.length;
+  }
+
+  if (Array.isArray(backup.emergencyContacts) && backup.emergencyContacts.length > 0) {
+    const valid = backup.emergencyContacts.filter((ec) => ec.id && ec.eventId);
+    await dbPutBatch("emergency_contacts", valid);
+    counts.emergencyContacts = valid.length;
+  }
+
+  if (Array.isArray(backup.documents) && backup.documents.length > 0) {
+    const valid = backup.documents.filter((doc) => doc.id && doc.eventId);
+    await dbPutBatch("documents", valid);
+    counts.documents = valid.length;
+  }
+
+  if (Array.isArray(backup.activityLogs) && backup.activityLogs.length > 0) {
+    const valid = backup.activityLogs.filter((log) => log.id && log.eventId);
+    await dbPutBatch("activity_logs", valid);
+    counts.activityLogs = valid.length;
   }
 
   return {

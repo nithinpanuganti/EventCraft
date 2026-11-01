@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { CalendarDays, PlusCircle, Users, DollarSign, LogIn, ArrowRight } from "lucide-react";
+import { CalendarDays, PlusCircle, Users, DollarSign, LogIn, ArrowRight, Calendar } from "lucide-react";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import { useAuth } from "@/components/layout/AuthContext";
+import { getLocalEvent } from "@/lib/storage/local-repository";
+import { downloadIcsFile } from "@/lib/calendar/ics-export";
 
 export default function MyEventsPage() {
   const { events, loadingEvents } = useAuth();
@@ -102,6 +104,19 @@ export default function MyEventsPage() {
                   Updated {formatDate(event.updatedAt)}
                 </span>
                 <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const fullEvent = await getLocalEvent(event.id);
+                      if (fullEvent) downloadIcsFile(fullEvent, fullEvent.tasks || []);
+                    }}
+                    className="inline-flex items-center text-xs font-semibold text-surface-500 hover:text-primary-600 transition-colors"
+                    title="Export iCalendar (.ics)"
+                  >
+                    <Calendar className="mr-1 h-3 w-3" />
+                    <span>.ICS</span>
+                  </button>
+                  <span className="text-surface-300">•</span>
                   <Link
                     href={`/events/new?resumeId=${event.id}`}
                     className="inline-flex items-center text-xs font-semibold text-surface-600 hover:text-surface-900 transition-colors"

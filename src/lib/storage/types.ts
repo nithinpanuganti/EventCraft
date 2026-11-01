@@ -1,3 +1,5 @@
+export type UserRole = "ORGANIZER" | "COORDINATOR" | "VENDOR" | "GUEST";
+
 export type EventType = "WEDDING" | "BIRTHDAY" | "COMMUNITY";
 
 export type EventStatus = "DRAFT" | "PLANNING" | "ACTIVE" | "COMPLETED" | "ARCHIVED";
@@ -10,13 +12,49 @@ export type TaskStatus = "TODO" | "IN_PROGRESS" | "BLOCKED" | "COMPLETED" | "CAN
 
 export type VendorStatus = "RESEARCHING" | "CONTACTED" | "QUOTED" | "BOOKED" | "DECLINED";
 
-export type PaymentStatus = "PENDING" | "PAID" | "OVERDUE";
+export type PaymentStatus = "PENDING" | "PAID" | "OVERDUE" | "SCHEDULED" | "CANCELLED";
+
+export type GuestCategory = "VIP" | "FAMILY" | "FRIENDS" | "COLLEAGUES" | "OTHER";
+
+export type InvitationStatus = "NOT_SENT" | "SENT" | "DELIVERED" | "BOUNCED";
+
+export type RsvpStatus = "PENDING" | "CONFIRMED" | "DECLINED";
+
+export type TableShape = "ROUND" | "RECTANGULAR" | "CUSTOM";
+
+export type ContractStatus = "DRAFT" | "PENDING_SIGNATURE" | "SIGNED" | "COMPLETED" | "TERMINATED";
+
+export type VendorPaymentType = "ADVANCE" | "MILESTONE" | "FINAL" | "REFUND";
+
+export type VendorPaymentMethod = "BANK_TRANSFER" | "CREDIT_CARD" | "CHECK" | "CASH" | "OTHER";
+
+export type RiskCategory = "WEATHER" | "VENDOR" | "EQUIPMENT" | "SCHEDULE" | "BUDGET" | "HEALTH_SAFETY" | "LOGISTICS" | "OTHER";
+
+export type RiskPriorityLevel = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+
+export type RiskStatus = "IDENTIFIED" | "MONITORING" | "MITIGATED" | "OCCURRED" | "CLOSED";
+
+export type IssueSeverity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+
+export type IssueStatus = "OPEN" | "INVESTIGATING" | "RESOLVED";
+
+export type VolunteerStatus = "CONFIRMED" | "CHECKED_IN" | "COMPLETED" | "NO_SHOW";
+
+export type EmergencyContactCategory = "SECURITY" | "MEDICAL" | "VENUE" | "POLICE" | "FIRE" | "KEY_ORGANIZER";
+
+export type DocumentCategory = "CONTRACT" | "INVOICE" | "RECEIPT" | "PERMIT" | "FLOOR_PLAN" | "RUNSHEET" | "OTHER";
 
 export interface LocalProfile {
   id: string;
   name: string;
   email: string;
+  role?: UserRole;
   passcodeHash?: string;
+  phone?: string;
+  organization?: string;
+  assignedEventIds?: string[];
+  vendorId?: string;
+  guestId?: string;
   createdAt: string;
   updatedAt: string;
   isDefault?: boolean;
@@ -41,6 +79,8 @@ export interface LocalDayOfScheduleItem {
   lead?: string;
   logisticalNotes?: string;
   notes?: string;
+  status?: "UPCOMING" | "IN_PROGRESS" | "COMPLETED" | "DELAYED";
+  assignedCoordinatorId?: string;
 }
 
 export interface LocalEventPlan {
@@ -85,6 +125,7 @@ export interface LocalExpense {
   paymentStatus: PaymentStatus;
   dueDate?: string | null;
   paidDate?: string | null;
+  vendorId?: string | null;
   notes?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -102,6 +143,7 @@ export interface LocalTask {
   completedAt?: string | null;
   order: number;
   assignedTo?: string | null;
+  assignedCoordinatorId?: string | null;
   prerequisiteIds?: string[];
   createdAt: string;
   updatedAt: string;
@@ -137,10 +179,240 @@ export interface LocalVendor {
   phone?: string | null;
   websiteUrl?: string | null;
   website?: string | null;
+  address?: string | null;
+  contractDetails?: string | null;
   notes?: string | null;
   quotes: LocalVendorQuote[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface LocalVendorContract {
+  id: string;
+  eventId: string;
+  vendorId: string;
+  title: string;
+  contractNumber: string;
+  status: ContractStatus;
+  totalAmount: number;
+  advanceAmount: number;
+  signedDate?: string | null;
+  effectiveDate: string;
+  completionDate: string;
+  termsAndConditions?: string;
+  documentName?: string | null;
+  documentData?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LocalVendorPayment {
+  id: string;
+  eventId: string;
+  vendorId: string;
+  contractId?: string | null;
+  title: string;
+  amount: number;
+  amountCents: number;
+  paymentType: VendorPaymentType;
+  paymentMethod: VendorPaymentMethod;
+  status: PaymentStatus;
+  dueDate: string;
+  paidDate?: string | null;
+  receiptNumber?: string | null;
+  receiptData?: string | null;
+  notes?: string | null;
+  linkedExpenseId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LocalGuest {
+  id: string;
+  eventId: string;
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  category: GuestCategory;
+  invitationStatus: InvitationStatus;
+  rsvpStatus: RsvpStatus;
+  plusOneAllowed: boolean;
+  plusOneCount: number;
+  plusOneNames: string[];
+  dietaryPreferences: string[];
+  accessibilityRequirements?: string | null;
+  groupName?: string | null;
+  tableId?: string | null;
+  seatNumber?: number | null;
+  checkInStatus: boolean;
+  checkedInAt?: string | null;
+  qrToken?: string;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LocalTable {
+  id: string;
+  eventId: string;
+  name: string;
+  shape: TableShape;
+  capacity: number;
+  zone?: string | null;
+  posX: number;
+  posY: number;
+  isVip: boolean;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LocalInvitation {
+  id: string;
+  eventId: string;
+  title: string;
+  templateId: "classic_wedding" | "milestone_birthday" | "corporate_gala" | "community_gathering" | "modern_minimalist";
+  hostName: string;
+  eventTitle: string;
+  eventDate: string;
+  eventTime: string;
+  location: string;
+  description: string;
+  dressCode?: string | null;
+  primaryColor: string;
+  secondaryColor: string;
+  fontFamily: string;
+  backgroundImageUrl?: string | null;
+  rsvpDeadline: string;
+  qrPayload: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LocalVenueLayoutElement {
+  id: string;
+  type:
+    | "STAGE"
+    | "TABLE_ROUND"
+    | "TABLE_RECT"
+    | "CHAIR"
+    | "FOOD_COUNTER"
+    | "BAR"
+    | "ENTRANCE"
+    | "EXIT"
+    | "DANCE_FLOOR"
+    | "DECOR_ZONE"
+    | "EMERGENCY_EXIT"
+    | "RESTROOM"
+    | "AUDIO_BOOTH";
+  label: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
+  color?: string;
+  capacity?: number;
+}
+
+export interface LocalVenueLayout {
+  id: string;
+  eventId: string;
+  name: string;
+  version: number;
+  dimensions: { width: number; height: number; unit: "METERS" | "FEET" };
+  elements: LocalVenueLayoutElement[];
+  isDefault: boolean;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LocalRisk {
+  id: string;
+  eventId: string;
+  title: string;
+  category: RiskCategory;
+  likelihood: number; // 1-5
+  severity: number; // 1-5
+  priorityScore: number; // likelihood * severity
+  priorityLevel: RiskPriorityLevel;
+  owner: string;
+  mitigationStrategy: string;
+  contingencyPlan: string;
+  status: RiskStatus;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LocalEventIssue {
+  id: string;
+  eventId: string;
+  title: string;
+  reportedBy: string;
+  assignedTo?: string | null;
+  severity: IssueSeverity;
+  status: IssueStatus;
+  description: string;
+  resolutionNotes?: string | null;
+  resolvedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LocalVolunteer {
+  id: string;
+  eventId: string;
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  role: string;
+  shiftStart: string;
+  shiftEnd: string;
+  location: string;
+  status: VolunteerStatus;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LocalEmergencyContact {
+  id: string;
+  eventId: string;
+  name: string;
+  role: string;
+  organization: string;
+  phone: string;
+  alternatePhone?: string | null;
+  category: EmergencyContactCategory;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LocalDocument {
+  id: string;
+  eventId: string;
+  title: string;
+  category: DocumentCategory;
+  fileType: string;
+  fileSize: number;
+  fileData?: string | null;
+  uploadedBy: string;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LocalActivityLog {
+  id: string;
+  eventId: string;
+  entityType: "EVENT" | "BUDGET" | "EXPENSE" | "TASK" | "GUEST" | "VENDOR" | "SEATING" | "RISK" | "CONTROL_CENTER";
+  action: string;
+  details: string;
+  performedBy: string;
+  timestamp: string;
 }
 
 export interface LocalPlanRevision {
@@ -176,6 +448,7 @@ export interface LocalEvent {
   totalBudgetCents: number; // in integer cents
   currency: string;
   status: EventStatus;
+  coordinatorIds?: string[];
   preferences?: LocalEventPreferences;
   plan?: LocalEventPlan | null;
   budgetCategories?: LocalBudgetCategory[];
@@ -200,6 +473,18 @@ export interface LocalDatabaseBackup {
   vendors: LocalVendor[];
   vendorQuotes: LocalVendorQuote[];
   planRevisions: LocalPlanRevision[];
+  guests?: LocalGuest[];
+  tables?: LocalTable[];
+  invitations?: LocalInvitation[];
+  vendorContracts?: LocalVendorContract[];
+  vendorPayments?: LocalVendorPayment[];
+  venueLayouts?: LocalVenueLayout[];
+  risks?: LocalRisk[];
+  issues?: LocalEventIssue[];
+  volunteers?: LocalVolunteer[];
+  emergencyContacts?: LocalEmergencyContact[];
+  documents?: LocalDocument[];
+  activityLogs?: LocalActivityLog[];
 }
 
 export interface TaskWithDependencies {
@@ -214,6 +499,7 @@ export interface TaskWithDependencies {
   completedAt: Date | string | null;
   order: number;
   assignedTo?: string | null;
+  assignedCoordinatorId?: string | null;
   createdAt?: Date | string;
   updatedAt?: Date | string;
   prerequisites: {
@@ -239,6 +525,7 @@ export interface VendorWithQuotes {
   email: string | null;
   phone: string | null;
   websiteUrl: string | null;
+  address?: string | null;
   status: VendorStatus;
   notes: string | null;
   createdAt: Date | string;
@@ -255,4 +542,3 @@ export interface VendorWithQuotes {
     createdAt: Date | string;
   }[];
 }
-

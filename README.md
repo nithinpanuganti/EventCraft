@@ -1,20 +1,21 @@
 # EventCraft AI
 
-> Local-first, browser-native event planning assistant for weddings, birthdays, and community gatherings.
+> Local-first, browser-native event planning and multi-role management suite for weddings, birthdays, corporate galas, and community gatherings.
 
-EventCraft AI is a client-contained web application that delivers a complete event planning workspace directly inside your web browser. It combines archetype-driven planning templates, deterministic integer-cents budgeting, a phased task state machine with dependency resolution, multi-quote vendor tracking, and a conversational natural-language command interpreter.
+EventCraft AI is a client-contained web application that delivers a complete event planning and operations workspace directly inside your web browser. It combines archetype-driven planning templates, deterministic integer-cents budgeting, a phased task state machine with dependency resolution, multi-role user workspaces (Organizer, Coordinator, Vendor, Guest), interactive seating and venue layout designers, live day-of control center operations, and a conversational natural-language command interpreter.
 
-The application operates on a **100% browser-local architecture** powered by native IndexedDB. All event data, calculations, rules, and revisions execute entirely on the client with **zero application backend, zero database daemons, and zero external cloud AI dependencies**.
+The application operates on a **100% browser-local architecture** powered by native IndexedDB across **21 dedicated stores**. All event data, calculations, rules, documents, and revisions execute entirely on the client with **zero application backend, zero database daemons, and zero external cloud AI dependencies**.
 
 ---
 
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.7.3-3178C6?style=flat-square&logo=typescript&logoColor=white)](tsconfig.json)
-[![Next.js](https://img.shields.io/badge/Next.js-15.2.1-000000?style=flat-square&logo=nextdotjs&logoColor=white)](next.config.js)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?style=flat-square&logo=typescript&logoColor=white)](tsconfig.json)
+[![Next.js](https://img.shields.io/badge/Next.js-15.5.28-000000?style=flat-square&logo=nextdotjs&logoColor=white)](next.config.js)
 [![React](https://img.shields.io/badge/React-19.0.0-61DAFB?style=flat-square&logo=react&logoColor=black)](package.json)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4.17-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)](tailwind.config.js)
-[![Vitest](https://img.shields.io/badge/Tests-76%20passed%20(9%20suites)-success?style=flat-square&logo=vitest&logoColor=white)](vitest.config.mts)
-[![Persistence](https://img.shields.io/badge/Persistence-IndexedDB%20v1%20(9%20Stores)-8A2BE2?style=flat-square)](src/lib/storage/indexed-db.ts)
+[![Vitest](https://img.shields.io/badge/Tests-84%20passed%20(10%20suites)-success?style=flat-square&logo=vitest&logoColor=white)](vitest.config.mts)
+[![Persistence](https://img.shields.io/badge/Persistence-IndexedDB%20v4%20(21%20Stores)-8A2BE2?style=flat-square)](src/lib/storage/indexed-db.ts)
 [![Architecture](https://img.shields.io/badge/Architecture-100%25%20Browser--Local%20%2F%20Zero--Network-10B981?style=flat-square)](src/lib/storage/local-repository.ts)
+[![Static Export](https://img.shields.io/badge/Static%20Export-29%20Prerendered%20Routes-blueviolet?style=flat-square)](next.config.js)
 [![License](https://img.shields.io/badge/License-Private-lightgrey?style=flat-square)](package.json)
 
 ---
@@ -22,15 +23,18 @@ The application operates on a **100% browser-local architecture** powered by nat
 ## Table of Contents
 
 - [Overview](#overview)
+- [Multi-Role System](#multi-role-system)
 - [Key Features](#key-features)
 - [Application Views and Routes](#application-views-and-routes)
 - [System Architecture](#system-architecture)
+- [IndexedDB Persistence Schema (21 Stores)](#indexeddb-persistence-schema-21-stores)
 - [Technology Stack](#technology-stack)
 - [Project Structure](#project-structure)
 - [Local Development Setup](#local-development-setup)
 - [Environment Variables](#environment-variables)
 - [Available Scripts and Testing](#available-scripts-and-testing)
 - [Data Storage and Privacy](#data-storage-and-privacy)
+- [Static Deployment (Netlify)](#static-deployment-netlify)
 - [Current Status and Roadmap](#current-status-and-roadmap)
 - [Contributing](#contributing)
 - [License](#license)
@@ -41,43 +45,144 @@ The application operates on a **100% browser-local architecture** powered by nat
 ## Overview
 
 ### The Problem
-Traditional event planning often relies on fragmented tools: disconnected spreadsheets, arbitrary budget estimates prone to rounding errors, static checklists lacking dependency tracking, and unstructured vendor notes. Furthermore, modern cloud event planning platforms enforce mandatory subscriptions, account lock-in, and constant data sharing with third-party servers.
+Traditional event planning often relies on fragmented tools: disconnected spreadsheets, arbitrary budget estimates prone to rounding errors, static checklists lacking dependency tracking, separate seating and ticketing tools, and unstructured vendor notes. Furthermore, modern cloud event planning platforms enforce mandatory subscriptions, account lock-in, and constant data sharing with third-party servers.
 
 ### The Solution
-EventCraft AI unifies the entire planning lifecycle into a single cohesive, highly responsive interface:
-- **Target Users**: Couples organizing weddings, families hosting milestone birthdays, non-profit organizers planning community fundraisers, and independent event coordinators.
+EventCraft AI unifies the entire planning and operational lifecycle into a single cohesive, highly responsive interface:
+- **Target Users**: Event organizers, day-of coordinators, vendor partners, and guests attending weddings, birthday galas, corporate gatherings, and community events.
 - **100% Browser-Local Reliability**: Operates entirely in the browser using native IndexedDB. No mandatory cloud accounts, no external database dependencies to install, and zero network latency.
+- **Multi-Role Workspaces**: Distinct user profiles, permission scopes, and dedicated view perspectives for Organizers, Coordinators, Vendors, and Guests.
 - **Financial Precision**: All financial calculations are tracked in exact integer cents, completely eliminating floating-point rounding errors and category reconciliation gaps.
 - **Structured Execution**: Tasks follow a formal state machine organized into chronological phases, complete with directed graph dependency validation to prevent scheduling conflicts.
 - **Deterministic Intelligence**: Generates structured blueprints, budgets, and itineraries using domain rule engines and pattern-matched command interpretation without cloud LLM inference or subscription dependencies.
 
 ---
 
+## Multi-Role System
+
+EventCraft AI provides distinct user experiences with dedicated permissions, navigation menus, and workflows:
+
+```mermaid
+flowchart LR
+    User([User Profile]) --> RoleSelect{Role Selector}
+    RoleSelect -->|Lead Authority| Org[Event Organizer]
+    RoleSelect -->|Field Logistics| Coord[Event Coordinator]
+    RoleSelect -->|Commercial & Scope| Ven[Vendor Partner]
+    RoleSelect -->|Self-Service RSVP| Gst[Guest]
+
+    Org --> Ops1[All Modules & Settings]
+    Coord --> Ops2[Control Center, Check-In & Volunteers]
+    Ven --> Ops3[Contracts, Quotations & Ledger]
+    Gst --> Ops4[RSVP Portal, Table View & Pass]
+```
+
+### 1. Event Organizer (`ORGANIZER`)
+- **Full Operational Scope**: Create and manage events, budgets, timeline tasks, vendor contracts, invitations, seating charts, and risk matrices.
+- **Executive Analytics**: Access 6 audit reports (Executive Summary, Budget Audit, Guest Roster, Vendor Settlement, Task Execution, Post-Event Settlement) with CSV export and print view.
+- **Global Settings**: Configure profiles, export atomic JSON backups, and manage application preferences.
+
+### 2. Event Coordinator (`COORDINATOR`)
+- **Field Command**: Access the live Day-of Control Center with ticking clocks, countdown timers, runsheet task toggles, and incident desks.
+- **Guest Ingress**: Live QR Check-in console with arrival progress meters and camera/manual verification.
+- **Volunteers & Staff**: Manage shifts, stations, and volunteer check-ins.
+- **Emergency Directory**: Rapid access to law enforcement, fire, medical, venue operations, and key organizers.
+
+### 3. Vendor Partner (`VENDOR`)
+- **Commercial Visibility**: View assigned contracts, quotation comparisons, and payment milestone terms.
+- **Payment Ledger**: Real-time financial balances tracking total committed funds, advance disbursements, and outstanding balances.
+- **Direct Support**: Instant emergency contacts and coordinator dial links.
+
+### 4. Guest (`GUEST`)
+- **Self-Service RSVP Portal**: Submit RSVPs (`CONFIRMED`, `DECLINED`), declare dietary restrictions, and allocate plus-ones.
+- **Personalized Table Locator**: View assigned table numbers, seating arrangements, and tablemates.
+- **Digital Pass**: Display client-side generated QR pass for rapid entrance check-in.
+
+---
+
 ## Key Features
 
 ### 1. Archetype-Driven Event Wizard
-- Guided 5-step event creation flow supporting three distinct event archetypes:
-  - **Wedding**: Comprehensive vendor requirements, multi-phase ceremony and reception timelines, decor themes, and high-detail guest coordination.
+- Guided 5-step event creation flow supporting distinct event archetypes:
+  - **Wedding**: Ceremony and reception timelines, decor themes, vendor requirements, and high-detail guest coordination.
   - **Birthday**: Milestone celebration themes, entertainment schedules, activity coordination, and catering tracking.
   - **Community Event**: Public gathering logistics, municipal permits, safety protocols, volunteer management, and accessible budget breakdowns.
 - Collects guest headcounts, target budgets, currency preferences, dates, and stylistic themes.
 
 ### 2. Exact-Cent Budget Allocation and Financial Ledger
 - **Integer-Cents Math**: Eliminates floating-point imprecision (`0.1 + 0.2 = 0.30000000000000004`) by computing all allocations, expenditures, and variances in integer minor units (cents).
-- **Proportional Archetype Splits**: Automatically divides target budgets across archetype-specific categories (e.g., Venue, Catering, Photography, Decor, Entertainment, Contingency) with exact remainder cents allocated to primary categories to guarantee a 100.00% balance.
+- **Proportional Archetype Splits**: Automatically divides target budgets across archetype-specific categories with exact remainder cents allocated to primary categories to guarantee a 100.00% balance.
 - **Expense Tracking**: Records individual expenses with payment tracking statuses (`PENDING`, `PAID`, `OVERDUE`), linked vendors, and real-time category variance monitoring.
 
-### 3. Phased Task Management and Day-Of Runsheet
-- **5 Planning Phases**: Tasks progress logically through `PLANNING` &rarr; `BOOKING` &rarr; `PREPARATION` &rarr; `EVENT_DAY` &rarr; `POST_EVENT`.
-- **Dependency Graph Validation**: Enforces prerequisite constraints using a Depth-First Search (DFS) cycle-detection algorithm to ensure tasks cannot be marked complete out of order or blocked in circular deadlocks.
-- **Hour-by-Hour Run of Show**: Generates an event-day itinerary with exact time slots, lead coordinators, logistical notes, and role assignments.
+### 3. Guest Management & RSVP Tracker ([`/guests`](src/app/guests/page.tsx))
+- **Live Metrics**: Total Guests, Confirmed, Declined, Pending, Checked In, and Dietary Requirements.
+- **Roster Management**: Full CRUD for guests with contact details, category tags (`VIP`, `Family`, `Friends`, `Colleagues`, `Other`), plus-one allocations, dietary preferences, and seating references.
+- **Search, Filter & Sort**: Filter by RSVP status, category, table assignment, or search by name and email.
+- **CSV Data Exchange**: Instant client-side CSV export and template-aware CSV import.
+- **Guest Self-Service Portal**: Accessible via `?view=rsvp` allowing guests to confirm attendance and specify dietary needs directly.
 
-### 4. Vendor Directory and Quotation Comparison
-- Directory supporting 11 vendor categories (Catering, Photography, Videography, Florist, Music/DJ, Venue, Hair & Makeup, Officiant, Transportation, Rentals, Planning).
-- Multi-quote comparison tracking: records proposals, calculates minimum, average, and maximum bid metrics, and supports single-click quotation acceptance.
+### 4. Interactive Seating Arrangement Planner ([`/seating`](src/app/seating/page.tsx))
+- **Table Studio**: Support for Round, Rectangular, and Custom table geometries with configurable seat capacities and VIP designations.
+- **Interactive Seating**: Assign unseated guests to table chairs with real-time capacity limit enforcement.
+- **Smart Grouping**: One-click **Auto-Assign Families & Groups** algorithm to seat guests with shared affinities or surnames together.
+- **Printable Seating Chart**: Clean, paper-optimized print layout for venue door staff.
+- **Guest Perspective View**: Accessible via `?view=guest` for attendees to view their table number and tablemates.
 
-### 5. Conversational Command Interpreter
-- Client-side natural language command parser allowing users to update their plan via quick text commands without clicking through multiple menus:
+### 5. Invitation & RSVP Page Builder ([`/invitations`](src/app/invitations/page.tsx))
+- **5 Liquid-Glass Invitation Themes**:
+  1. *Classic Wedding Romance* (Rose Gold & Warm Champagne)
+  2. *Milestone Birthday Celebration* (Neon Violet & Vibrant Magenta)
+  3. *Corporate Gala & Summit* (Deep Navy & Polished Silver)
+  4. *Golden Gathering Celebration* (Amber Glow & Emerald Accent)
+  5. *Modern Minimalist Luxe* (Slate Monochromatic & Translucent Glass)
+- **Customizer Suite**: Real-time editor for titles, host names, date/time, dress codes, custom messages, and styling themes.
+- **Pure Client-Side SVG QR Code Generator**: Built using [`QrCodeSvg.tsx`](src/components/ui/QrCodeSvg.tsx) with zero external network or image dependencies, generating standard QR matrices encoding the guest RSVP URL.
+- **Download & Print Preview**: High-resolution print mode for physical card production.
+
+### 6. Event-Day Control Center ([`/control-center`](src/app/control-center/page.tsx))
+- **Live Browser Clock & Event Countdown**: Real-time ticking timekeeper tracking hours until event kickoff.
+- **Runsheet Checklist**: Categorized timeline items with immediate status transitions (`TODO`, `IN_PROGRESS`, `COMPLETED`, `BLOCKED`).
+- **Incident Resolution Desk**: Rapid incident logging with severity levels (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`), assignee tracking, and status workflows (`OPEN`, `INVESTIGATING`, `RESOLVED`).
+- **Quick-Dial Emergency Speed Panel**: Immediate telephone links to security, medical staff, venue directors, and key leads.
+
+### 7. Vendor Contracts & Payment Tracking ([`/vendors`](src/app/vendors/page.tsx))
+- **4 Tabbed Workspaces**:
+  1. **Vendor Directory**: Contact cards, service categories, and assigned ratings.
+  2. **Quotation Comparison**: Side-by-side quotation evaluation with scope and pricing metrics.
+  3. **Contracts & Terms**: Contract numbers, advance payments, payment schedules, cancellation terms, and status badges (`DRAFT`, `PENDING_SIGNATURE`, `SIGNED`, `COMPLETED`).
+  4. **Payment Ledger**: Financial balance sheet tracking total committed funds, advance amounts paid, and remaining balances due.
+
+### 8. Interactive 2D Venue Layout Designer ([`/venue-layout`](src/app/venue-layout/page.tsx))
+- **Spatial Canvas**: Interactive 2D drag-and-drop floor plan designer.
+- **Venue Element Catalog**: Stages, Dance Floors, Round Tables, Rectangular Tables, Buffet Counters, Bars, DJ Booths, and Emergency Exits.
+- **Canvas Controls**: Element rotation ($0^\circ-360^\circ$), dimension resizing, grid snapping ($20\text{px}$ alignment), zoom in/out ($50\%-150\%$), and canvas centering.
+- **IndexedDB Persistence**: Automatically saves and restores multi-element floor plans to local storage.
+
+### 9. Risk & Contingency Manager ([`/risks`](src/app/risks/page.tsx))
+- **5x5 Likelihood vs. Severity Matrix**: Color-coded risk assessment grid calculating priority scores ($1 - 25$) and assigning levels:
+  - *Low* ($1-5$), *Medium* ($6-10$), *High* ($12-16$), *Critical* ($20-25$).
+- **Matrix Filtering**: Clicking any matrix cell filters the risk register to only risks matching that exact coordinate.
+- **Mitigation & Contingency Plans**: Detailed mitigation steps, fallback plans, and status tracking (`IDENTIFIED`, `MITIGATING`, `RESOLVED`, `ACCEPTED`).
+
+### 10. Event Analytics & Executive Reports ([`/analytics`](src/app/analytics/page.tsx))
+- **Executive Metric Cards**: Budget utilization percentage, RSVP response rate, task completion rate, open incident count, and critical risk index.
+- **6 Formal Audit Reports**:
+  1. *Executive Summary Report*
+  2. *Budget Audit & Variance Report*
+  3. *Guest Attendance & Dietary Roster*
+  4. *Vendor Settlement & Contract Summary*
+  5. *Task Execution Audit*
+  6. *Post-Event Settlement Statement*
+- **Export & Print**: One-click CSV generation and printer-friendly view for all reports.
+
+### 11. Additional Operations Modules
+- **QR Check-In Console & Digital Pass** ([`/check-in`](src/app/check-in/page.tsx)): Fast search, real-time arrival progress bar, QR code token simulator, manual check-in toggle, and guest digital pass mode (`?view=pass`).
+- **Volunteer & Staff Roster** ([`/volunteers`](src/app/volunteers/page.tsx)): Manage volunteer assignments across stations (Registration, Ushers, Stage, Catering) with check-in and shift completion tracking.
+- **Document Vault** ([`/documents`](src/app/documents/page.tsx)): Browser-local file storage converting PDFs and images into Base64 data URLs stored in IndexedDB with category filters and download capability.
+- **Emergency Contacts Directory** ([`/emergency-contacts`](src/app/emergency-contacts/page.tsx)): Categorized directory of Police, Fire, Medical, Security, and Venue contacts with 1-click `tel:` links.
+- **Calendar .ICS Exporter** ([`src/lib/calendar/ics-export.ts`](src/lib/calendar/ics-export.ts)): RFC 5545 compliant `.ics` calendar generator integrated into the [`/events`](src/app/events/page.tsx) cards.
+
+### 12. Conversational Command Interpreter
+- Client-side natural language command parser allowing users to update their plan via quick text commands:
   - `add task [title]` &rarr; Adds a new task to the appropriate phase.
   - `complete task [title]` &rarr; Checks prerequisites and marks the task as complete.
   - `change date to [YYYY-MM-DD]` &rarr; Updates the event target date and recalculates dependent milestones.
@@ -86,12 +191,6 @@ EventCraft AI unifies the entire planning lifecycle into a single cohesive, high
   - `show remaining budget` &rarr; Returns an instant breakdown of allocated vs. spent funds.
   - `regenerate plan` &rarr; Re-runs the deterministic blueprint generator with confirmation guards.
   - `update theme [theme description]` &rarr; Updates event styling and decor direction.
-
-### 6. Local Profile Management and Data Portability
-- **Profiles**: Local user profiles with salt-hashed passcodes for convenient multi-user workspace separation on shared devices.
-- **JSON Backup Export**: Download the entire application state (all 9 IndexedDB stores) into a timestamped `.json` file (`eventcraft-backup-YYYY-MM-DD.json`).
-- **Schema-Validated Restore**: Import backups with runtime structural validation using Zod schemas.
-- **Database Reset**: Safe one-click purge to clear local storage and start fresh.
 
 ---
 
@@ -116,18 +215,30 @@ EventCraft AI features a cohesive, premium **Liquid Glass** user interface desig
 | :--- | :--- | :--- |
 | `/` | **Landing Page** | Product introduction, architectural summary, feature highlights, and quick-start actions. |
 | `/dashboard` | **Event Dashboard** | Central overview displaying active event countdowns, budget health meters, and upcoming tasks. |
-| `/events` | **Event Selector** | List of all planned events with quick status cards and switcher options. |
+| `/events` | **Event Selector** | List of all planned events with quick status cards, switcher options, and .ICS calendar export. |
 | `/events/new` | **Event Wizard** | Step-by-step creation flow for configuring archetype, dates, guests, and initial budget. |
-| `/planner` | **Plan and Revisions** | Concept narrative, themes, color palettes, recommendations, and conversational revision command console. |
+| `/planner` | **Plan & Revisions** | Concept narrative, themes, color palettes, recommendations, and conversational revision console. |
 | `/budget` | **Budget Ledger** | Interactive category allocation sliders, expense logging modal, and variance calculation tables. |
-| `/timeline` | **Timeline and Runsheet** | Phased milestone task checklists with dependency badges alongside the hour-by-hour day-of Run of Show. |
-| `/vendors` | **Vendor Directory** | Contact tracking, quote comparison matrices, and vendor status progression pipeline. |
-| `/settings` | **Settings and Backup** | Profile switcher, passcode configuration, atomic JSON backup export, and backup restore. |
-| `/login` | **Profile Login** | Profile selection with optional passcode verification. |
-| `/register` | **Profile Registration** | Quick creation of new local profiles stored securely in the browser. |
-
-> [!TIP]
-> To view the live interface, start the development server using `start.bat` or `npm run dev` and navigate to `http://localhost:3000`.
+| `/timeline` | **Timeline & Runsheet**| Phased milestone task checklists with dependency badges alongside the hour-by-hour day-of Run of Show. |
+| `/guests` | **Guest Management** | Full guest roster CRUD, RSVP tracker, category tags, dietary logs, and CSV import/export. |
+| `/seating` | **Seating Planner** | Table geometry manager, interactive seat assignment, capacity limits, and printable chart. |
+| `/invitations` | **Invitation Builder** | 5 liquid-glass invitation themes, customizer studio, pure SVG QR generator, and download/print. |
+| `/control-center` | **Control Center** | Live event-day clock, countdown, runsheet execution checklist, and incident desk. |
+| `/vendors` | **Vendors & Contracts**| 4 workspaces: Directory, Quotation Comparison, Contracts & Terms, and Payment Ledger. |
+| `/venue-layout` | **Venue Layout** | Interactive 2D drag-and-drop floor plan designer with rotation, grid snapping, and zoom. |
+| `/risks` | **Risk Matrix** | 5x5 Likelihood vs Severity risk assessment matrix with mitigation and contingency plans. |
+| `/analytics` | **Analytics & Reports** | Executive KPI cards and 6 formal audit reports with CSV download and print view. |
+| `/check-in` | **Check-in Console** | QR scanner simulator, arrival progress bar, manual door checks, and guest digital pass mode. |
+| `/volunteers` | **Volunteer Roster** | Volunteer shifts and station management with check-in and shift completion tracking. |
+| `/documents` | **Document Vault** | Local Base64 file attachment storage with category filtering and instant download. |
+| `/emergency-contacts`| **Emergency Directory**| Categorized directory of Police, Fire, Medical, Security, and Venue contacts with 1-click calls. |
+| `/settings` | **Settings & Backup** | Role profile switcher, passcode configuration, atomic JSON backup export, and backup restore. |
+| `/login` | **Role Login** | Multi-role login console with pre-configured demo account buttons and local storage disclosure. |
+| `/register` | **Registration** | Role-specific profile registration stored securely in local browser storage. |
+| `/login/organizer` | **Organizer Login** | Direct login and demo launcher for Event Organizers. |
+| `/login/coordinator` | **Coordinator Login**| Direct login and demo launcher for Event Coordinators. |
+| `/login/vendor` | **Vendor Login** | Direct login and demo launcher for Vendor Partners. |
+| `/login/guest` | **Guest Login** | Direct login and demo launcher for Guests. |
 
 ---
 
@@ -138,18 +249,21 @@ EventCraft AI operates on a **100% client-side, browser-native architecture**. A
 ```mermaid
 flowchart TD
     subgraph Browser ["Client Browser Runtime (React 19 / Next.js)"]
-        UI["Liquid Glass UI Primitives<br/>(AppShell, Modals, Sliders, Cards)"]
-        AuthCtx["AuthContext & Profile Manager<br/>(LocalStorage Active Profile Tracking)"]
+        UI["Liquid Glass UI Primitives<br/>(AppShell, Modals, Sliders, Cards, Canvases)"]
+        AuthCtx["AuthContext & Role Manager<br/>(Organizer • Coordinator • Vendor • Guest)"]
         
-        subgraph LocalEngine ["Local Planning & Calculation Engine"]
+        subgraph LocalEngine ["Local Planning & Operational Engine"]
             RuleEngine["Deterministic Rule Engine<br/>(Weddings, Birthdays, Community)"]
             CmdParser["Deterministic Command Interpreter<br/>(Pattern Matching & Revision Actions)"]
             BudgetMath["Exact-Cent Budget Engine<br/>(Integer Cents Arithmetic)"]
             TaskGraph["Task State Machine<br/>(DFS Cycle Detection)"]
+            RiskCalc["5x5 Risk & Priority Calculator"]
+            IcsGen["RFC 5545 iCalendar (.ics) Generator"]
+            QrGen["Pure Client-Side SVG QR Engine"]
         end
 
         subgraph LocalStorage ["Browser Native Persistence Layer"]
-            IDB[("IndexedDB: eventcraft_local_db<br/>• profiles • events • event_plans<br/>• budget_categories • expenses<br/>• tasks • vendors • vendor_quotes<br/>• plan_revisions")]
+            IDB[("IndexedDB: eventcraft_local_db (v4)<br/>21 Object Stores")]
             BackupUtil["JSON Backup Export / Restore<br/>(Zod Schema Runtime Validation)"]
         end
     end
@@ -160,18 +274,42 @@ flowchart TD
     IDB <--> BackupUtil
 ```
 
-### Architectural Principles
-1. **Zero Runtime Network Dependencies**: The application triggers zero HTTP requests (`fetch()`, `axios`, or `XMLHttpRequest`) to external servers or cloud services during normal operation.
-2. **Zero Database Configuration**: No PostgreSQL, MySQL, Docker containers, or database daemons are required. All records persist natively in browser IndexedDB.
-3. **Deterministic Math and Rules**: Budget balancing, task dependencies, and plan generation use deterministic algorithms that produce identical, verified results without floating-point errors.
-4. **Data Ownership and Privacy**: Event details, guest counts, vendor quotes, and budget figures never leave the user's machine.
+---
+
+## IndexedDB Persistence Schema (21 Stores)
+
+The application manages local state across 21 dedicated IndexedDB object stores (Database version `4`):
+
+1. `profiles`: User accounts, assigned roles (`ORGANIZER`, `COORDINATOR`, `VENDOR`, `GUEST`), and salt-hashed passcodes.
+2. `auth_sessions`: Active user session tokens and timestamps.
+3. `events`: Core event records, dates, guest counts, archetypes, and total budgets.
+4. `event_plans`: Architectural concepts, decor palettes, and detailed schedules.
+5. `budget_categories`: Integer-cents allocations, percentages, and baseline budgets.
+6. `expenses`: Line-item expenditures, vendor links, and payment states.
+7. `tasks`: Phased checklist milestones, priority levels, and dependency arrays.
+8. `vendors`: Vendor contacts, services, categories, and ratings.
+9. `vendor_quotes`: Itemized quotation bids and proposal metrics.
+10. `plan_revisions`: Audit history of conversational revisions.
+11. `guests`: Attendee profiles, RSVP statuses, plus-ones, dietary restrictions, and table links.
+12. `tables`: Seating arrangements, table geometries (Round, Rectangular, Custom), and capacities.
+13. `invitations`: Invitation designs, themes, typography, and custom greeting messages.
+14. `vendor_contracts`: Formal agreements, advance deposits, milestones, and cancellation policies.
+15. `vendor_payments`: Payment installment schedules and settlement statuses.
+16. `vendor_quotations`: Vendor quotation comparison items.
+17. `event_issues`: Day-of incident reports, severity levels, and resolution states.
+18. `venue_layouts`: Interactive 2D floor plans, spatial coordinates, dimensions, and rotations.
+19. `risks`: 5x5 Likelihood/Severity risk matrices, priority scores ($1-25$), and contingency plans.
+20. `checkin_logs`: Timestamped guest arrival and check-in audit records.
+21. `volunteers`: Volunteer rosters, assigned shifts, stations, and check-in statuses.
+22. `documents`: Client-side Base64 file attachments, contracts, and municipal permits.
+23. `emergency_contacts`: Emergency directory covering Police, Fire, Medical, Security, and Venue leads.
 
 ---
 
 ## Technology Stack
 
 ### Frontend and Client Runtime
-- **Framework**: [Next.js 15.2.1](https://nextjs.org/) (Static HTML Export `output: 'export'`, client-rendered App Router)
+- **Framework**: [Next.js 15.5.28](https://nextjs.org/) (Static HTML Export `output: 'export'`, client-rendered App Router)
 - **Hosting & Static Export**: [Netlify](https://www.netlify.com/) (Configured with `netlify.toml` and `public/_headers`)
 - **UI Library**: [React 19.0.0](https://react.dev/) (Hooks, Context, Client Components)
 - **Styling**: [Tailwind CSS 3.4.17](https://tailwindcss.com/) with custom Liquid Glass design tokens and [PostCSS 8.4.38](https://postcss.org/)
@@ -179,13 +317,14 @@ flowchart TD
 - **Class Utilities**: `clsx` and `tailwind-merge`
 
 ### Local Persistence and Planning
-- **Persistence**: Native Browser IndexedDB (Database: `eventcraft_local_db`, 9 dedicated object stores) with an in-memory fallback for SSR and testing
+- **Persistence**: Native Browser IndexedDB (Database: `eventcraft_local_db`, 21 dedicated object stores) with an in-memory fallback for SSR and testing
 - **Schema Validation**: [Zod 3.24.2](https://zod.dev/) for form validation, blueprint constraints, and backup file integrity
 - **Planning Engines**: Custom deterministic rule engine and natural-language command interpreter
+- **Calendar & QR Utilities**: RFC 5545 `.ics` generator and pure client-side SVG QR code generator
 
 ### Quality and Testing
 - **Test Framework**: [Vitest 5.0.5](https://vitest.dev/) with native ESM configuration
-- **Type Checking**: [TypeScript 5.7.3](https://www.typescriptlang.org/) (Strict mode enabled)
+- **Type Checking**: [TypeScript 5.8](https://www.typescriptlang.org/) (Strict mode enabled)
 - **Linting**: [ESLint 9.21.0](https://eslint.org/) with `eslint-config-next`
 
 ---
@@ -200,24 +339,33 @@ EventCraft AI/
 │   ├── DEPLOYMENT_GUIDE.md         # Deployment runbook
 │   ├── TESTING_GUIDE.md            # Test suite catalogue & execution guide
 │   └── USER_FLOWS.md               # User journeys & state transition diagrams
-├── prisma/                         # Historical schema reference (inactive at runtime)
-│   ├── schema.prisma               # Prisma data model reference
-│   └── migrations/                 # Version-controlled SQL migrations
 ├── src/
-│   ├── app/                        # Next.js App Router client pages
+│   ├── app/                        # Next.js App Router client pages (29 routes)
 │   │   ├── layout.tsx              # Root HTML layout and context providers
 │   │   ├── page.tsx                # Landing and presentation page
 │   │   ├── globals.css             # Tailwind directives & glassmorphic tokens
 │   │   ├── dashboard/              # Active event overview and metrics
-│   │   ├── events/                 # Event list and creation wizard (/events/new)
+│   │   ├── events/                 # Event list, creation wizard & .ics export
 │   │   ├── planner/                # Concept viewer & command revision console
 │   │   ├── budget/                 # Category sliders and expense ledger
 │   │   ├── timeline/               # Phased milestones & day-of runsheet
-│   │   ├── vendors/                # Vendor directory & quotation comparisons
+│   │   ├── guests/                 # Guest management & RSVP portal (?view=rsvp)
+│   │   ├── seating/                # Interactive table seating & print chart
+│   │   ├── invitations/            # 5-theme invitation builder & SVG QR code
+│   │   ├── control-center/         # Day-of live clock, runsheet & incident desk
+│   │   ├── vendors/                # Directory, quotes, contracts & payment ledger
+│   │   ├── venue-layout/           # 2D interactive spatial floor plan designer
+│   │   ├── risks/                  # 5x5 Likelihood vs Severity risk matrix
+│   │   ├── analytics/              # Executive KPI cards & 6 audit report generators
+│   │   ├── check-in/               # QR scanner simulator & digital pass (?view=pass)
+│   │   ├── volunteers/             # Volunteer shift & station management
+│   │   ├── documents/              # Client-side Base64 document vault
+│   │   ├── emergency-contacts/     # 1-click emergency contacts directory
 │   │   ├── settings/               # Profile management & JSON backup export/import
-│   │   └── login/ & register/      # Local profile selection screens
+│   │   ├── login/ & register/      # Multi-role login and registration screens
+│   │   └── login/{role}/           # Role-specific entry shortcuts
 │   ├── components/                 # React component library
-│   │   ├── ui/                     # 14 reusable glass UI primitives (Button, Modal, etc.)
+│   │   ├── ui/                     # Glass UI primitives (Button, Modal, QrCodeSvg, etc.)
 │   │   ├── layout/                 # AppShell, Header, Sidebar, AuthContext
 │   │   ├── events/                 # Event creation wizard & plan display
 │   │   ├── planner/                # Conversational revision command panel
@@ -225,13 +373,14 @@ EventCraft AI/
 │   │   ├── timeline/               # Task checklists, dependency tags, runsheet
 │   │   └── vendors/                # Vendor cards, quote tables, dialogs
 │   ├── lib/                        # Core business logic and storage services
-│   │   ├── storage/                # IndexedDB engine, local repository, types, tests
-│   │   ├── local-planning/         # Rule engine, command interpreter, schema, tests
-│   │   ├── budget/                 # Exact-cent financial arithmetic & tests
+│   │   ├── storage/                # IndexedDB engine (21 stores), local repository, types
+│   │   ├── local-planning/         # Rule engine, command interpreter, schema
+│   │   ├── budget/                 # Exact-cent financial arithmetic
 │   │   ├── timeline/               # Task state machine & DFS cycle detection
 │   │   ├── vendors/                # Vendor schemas and quote comparison logic
-│   │   ├── validations/            # Zod validation schemas & tests
-│   │   ├── navigation.ts           # Navigation items and route definitions
+│   │   ├── calendar/               # RFC 5545 iCalendar (.ics) export generator
+│   │   ├── validations/            # Zod validation schemas
+│   │   ├── navigation.ts           # Role-aware navigation items and routes
 │   │   └── utils.ts                # Class merger and currency formatting utilities
 │   └── types/                      # Shared TypeScript interface definitions
 ├── public/                         # Static deployment assets
@@ -289,8 +438,6 @@ copy .env.example .env
 cp .env.example .env
 ```
 
-The application runs immediately out of the box with default settings.
-
 ---
 
 ### Step 4: Start the Development Server
@@ -302,8 +449,6 @@ Double-click `start.bat` in the root folder, or execute it in your terminal:
 start.bat
 ```
 
-The launcher verifies Node.js, installs dependencies if missing, ensures `.env` exists, and starts the development server.
-
 #### Option B: Standard npm Command (All Platforms)
 
 ```bash
@@ -313,9 +458,6 @@ npm.cmd run dev
 # On macOS / Linux:
 npm run dev
 ```
-
-> [!NOTE]
-> If you encounter `File ... npm.ps1 cannot be loaded because running scripts is disabled` on Windows PowerShell, run `npm.cmd run dev` or run PowerShell with `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass`.
 
 Once the dev server compiles, open your browser and navigate to:
 **[http://localhost:3000](http://localhost:3000)**
@@ -331,9 +473,6 @@ All configuration settings are managed via environment variables. Refer to [`.en
 | `NEXT_PUBLIC_APP_NAME` | Display name of the application. | Optional | `EventCraft AI` |
 | `NEXT_PUBLIC_APP_ENV` | Application environment mode (`development`, `production`). | Optional | `development` |
 | `NEXT_PUBLIC_APP_URL` | Canonical URL of the application. | Optional | `http://localhost:3000` |
-
-> [!NOTE]
-> EventCraft AI requires zero backend connection strings, authentication secrets, or external credentials.
 
 ---
 
@@ -362,12 +501,13 @@ npx serve out
 ```
 
 ### Verified Test Suite Breakdown
-EventCraft AI includes a test suite covering unit math, dependency resolution algorithms, storage persistence, schema validation, command interpretation, and zero-network verification.
+EventCraft AI includes a test suite covering unit math, dependency resolution algorithms, storage persistence, schema validation, command interpretation, multi-role navigation, and calendar generation.
 
-**Current Test Results**: **76 passed** across **9 test files** (100% success rate):
+**Current Test Results**: **84 passed** across **10 test files** (100% success rate):
 
 | Category | Test Suite File | Count | Verified Behaviors |
 | :--- | :--- | :---: | :--- |
+| **Multi-Role System** | `src/lib/storage/multi-role-system.test.ts` | 8 | Role navigation filters, demo database seeder (21 stores), 5x5 risk scoring algorithm, CSV export/import integrity, RFC 5545 .ics generation |
 | **Storage Architecture** | `src/lib/storage/browser-architecture.test.ts` | 5 | Zero network requests verification, profile switching/deletion, event cascade cleanup, corrupted backup rejection, navigation route integrity |
 | **IndexedDB Engine** | `src/lib/storage/indexed-db.test.ts` | 4 | IndexedDB CRUD, memory fallback, versioned backup export, and schema-validated restore |
 | **Local Repository** | `src/lib/storage/local-repository.test.ts` | 4 | Passcode hashing, event scoping, task dependencies, vendor quotes, and budget CRUD |
@@ -377,7 +517,7 @@ EventCraft AI includes a test suite covering unit math, dependency resolution al
 | **Timeline Engine** | `src/lib/timeline/task-state-machine.test.ts` | 16 | Transition state machine, cyclic dependency detection (DFS), prerequisite chains |
 | **Wizard Validation** | `src/lib/validations/wizard.test.ts` | 15 | 5-step event wizard schema boundaries, budget limits, future date constraints |
 | **General Validation** | `src/lib/validations/validations.test.ts` | 6 | Input schemas and partial update guardrails |
-| **Total** | **9 Suites** | **76** | **All 76 tests passing (100% success rate)** |
+| **Total** | **10 Suites** | **84** | **All 84 tests passing (100% success rate)** |
 
 ---
 
@@ -386,22 +526,13 @@ EventCraft AI includes a test suite covering unit math, dependency resolution al
 EventCraft AI prioritizes user privacy and data ownership through clear storage boundaries:
 
 1. **Client-Contained Storage**:
-   All event details, guest counts, budget numbers, vendor quotes, and profile records are stored directly inside your browser's IndexedDB engine (`eventcraft_local_db`). No data is transmitted to external servers, cloud providers, or telemetry collectors.
+   All event details, guest rosters, invitations, seating charts, budget figures, vendor contracts, risk registers, and profile records are stored directly inside your browser's IndexedDB engine (`eventcraft_local_db`). No data is transmitted to external servers, cloud providers, or telemetry collectors.
 2. **Object Stores**:
-   Data is partitioned across 9 distinct IndexedDB object stores:
-   - `profiles`: User names, emails, and salt-hashed passcodes.
-   - `events`: Event titles, archetypes, dates, guest counts, and total budgets.
-   - `event_plans`: Concept narratives, themes, color palettes, and day-of schedules.
-   - `budget_categories`: Cents-allocated category limits and percentage weights.
-   - `expenses`: Individual expense items, payment statuses, and vendor links.
-   - `tasks`: Phased checklist items, priorities, due dates, and dependency arrays.
-   - `vendors`: Vendor contact information, categories, and booking status.
-   - `vendor_quotes`: Itemized quotes submitted by vendors.
-   - `plan_revisions`: Audit history of modifications made via command revisions.
+   Data is partitioned across 21 distinct IndexedDB object stores supporting atomic queries and isolated cascading deletes.
 3. **Local Profiles as Workspaces**:
-   Profiles provide convenient workspace separation for different planners or events on a shared browser. Because profiles reside in browser storage, they are not intended as cryptographic security boundaries against users with access to browser developer tools.
+   Profiles provide convenient workspace separation for different planners or roles on a shared browser.
 4. **Storage Reset and Browser Clearing**:
-   Clearing site data or cache for `localhost` in your browser will erase local IndexedDB stores. To ensure your plans are preserved, use the **Export Backup (.json)** feature in `/settings` to save an atomic copy to your local drive.
+   Clearing site data or cache for `localhost` in your browser will erase local IndexedDB stores. Use the **Export Backup (.json)** feature in `/settings` to save an atomic copy to your local drive.
 
 ---
 
@@ -411,17 +542,9 @@ EventCraft AI is fully prepared for static deployment on **Netlify** or any stan
 
 ### Architecture & Configuration
 - **Static HTML Export**: `output: 'export'` and `trailingSlash: true` configured in [`next.config.js`](next.config.js).
-- **Publish Directory**: `out/` generated on `npm run build` containing all 14 prerendered application routes.
+- **Publish Directory**: `out/` generated on `npm run build` containing all 29 prerendered application routes.
 - **Security Headers**: Defined in [`public/_headers`](public/_headers) (automatically copied to `out/_headers`) setting `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, and restrictive permissions policies.
 - **Netlify Configuration**: [`netlify.toml`](netlify.toml) pre-specifies the build command (`npm run build`) and output folder (`out`).
-
-### Deploying to Netlify
-1. Connect this repository to your Netlify dashboard.
-2. Netlify will auto-detect the build command (`npm run build`) and publish directory (`out`) from `netlify.toml`.
-3. Click **Deploy**.
-
-> [!IMPORTANT]
-> **Data Portability Notice**: Because EventCraft AI uses browser-native IndexedDB, data stored during local development on `localhost` does not automatically transfer to your deployed web domain. To migrate your events, export a backup from `http://localhost:3000/settings` and restore the `.json` file on your deployed Netlify URL.
 
 ---
 
@@ -429,24 +552,28 @@ EventCraft AI is fully prepared for static deployment on **Netlify** or any stan
 
 ### Implemented and Verified Capabilities
 - [x] 100% Browser-local architecture with zero runtime server or database dependencies.
+- [x] Multi-Role User System with 4 distinct roles (`ORGANIZER`, `COORDINATOR`, `VENDOR`, `GUEST`).
+- [x] Complete client persistence across 21 IndexedDB stores with SSR in-memory fallback.
+- [x] Guest Management & RSVP Tracker with CSV import/export and guest self-service portal.
+- [x] Interactive Seating Arrangement Planner with smart group auto-assign & printable charts.
+- [x] Invitation & RSVP Builder with 5 liquid-glass themes & pure client-side SVG QR generator.
+- [x] Live Event-Day Control Center with browser clock, countdown, runsheet toggles, and incident desk.
+- [x] Vendor Contracts & Payment Tracking with quotation comparisons and balance ledger.
+- [x] 2D Interactive Venue Layout Designer with element rotation, grid snapping, and zoom.
+- [x] Risk & Contingency Manager with 5x5 Likelihood vs Severity matrix and priority scoring.
+- [x] Event Analytics & Executive Reporting with 6 official audit report generators and CSV/print export.
+- [x] QR Check-In Console with arrival progress bar and guest digital pass mode.
+- [x] Volunteer and Staff Roster management with shift and station tracking.
+- [x] Client-side Document Vault converting files to Base64 data URLs in IndexedDB.
+- [x] Categorized Emergency Contacts Directory with 1-click dial links.
+- [x] RFC 5545 iCalendar (`.ics`) generator and export trigger.
 - [x] Netlify static deployment ready with `out/` export, `netlify.toml`, and `public/_headers`.
 - [x] Multi-archetype event planning wizard (Weddings, Birthdays, Community Events).
-- [x] Complete client persistence with 9 IndexedDB stores and SSR in-memory fallback.
 - [x] Exact-cent integer budgeting engine with guaranteed zero-rounding-error balancing.
 - [x] Phased task state machine with DFS cyclic dependency prevention.
-- [x] Hour-by-hour day-of Run of Show schedule generator.
-- [x] Vendor directory with quotation comparison and status pipelines.
 - [x] Conversational command interpreter for natural-language plan adjustments.
-- [x] Atomic JSON database backup export and schema-validated restore.
 - [x] Translucent Liquid Glass design system built with responsive Tailwind CSS.
-- [x] Automated Windows launcher script (`start.bat`) with dependency verification.
-- [x] Automated test suite with 76 passing tests across 9 suites.
-
-### Planned Enhancements
-- [ ] Export of Day-of Run of Show to iCal (`.ics`) and printable PDF formats.
-- [ ] Seating chart builder with drag-and-drop table arrangements.
-- [ ] Multi-event timeline overlap calendar view.
-- [ ] Customizable archetype template creator.
+- [x] Automated test suite with 84 passing tests across 10 suites.
 
 ---
 
@@ -477,7 +604,7 @@ Contributions to EventCraft AI are welcome. To contribute:
 
 ## License
 
-This repository is currently marked as `"private": true` in [`package.json`](package.json). All rights are reserved. An open-source license has not yet been specified.
+This repository is currently marked as `"private": true` in [`package.json`](package.json). All rights are reserved.
 
 ---
 
